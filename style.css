@@ -1402,3 +1402,23 @@ body {
 .tricks-group { background: #fff4d6; border: 2px dashed #e0a400; border-radius: 14px; padding: 10px 12px; }
 .check-row { display: flex !important; align-items: center; gap: 8px; font-size: 0.8rem !important; font-weight: 700 !important; }
 .check-row input { accent-color: var(--pink); width: 16px; height: 16px; }
+
+/* 手機版補強：機頂擺設與招牌不可撐出橫向捲軸 */
+.machine-topper > * { min-width: 0; }
+.topper-shelf { overflow: hidden; }
+.brand-chinese { white-space: nowrap; }
+@media (max-width: 620px) {
+  .machine-topper { gap: 4px; }
+  .shelf-items img:nth-child(n+7) { display: none; }
+  .shelf-items img { width: 44px; height: 44px; margin-left: -10px; }
+  .shelf-items { height: 52px; padding-left: 10px; }
+  .shelf-sign { font-size: 0.6rem; padding: 1px 8px; }
+  .clipboard { width: 52px; height: 74px; flex: none; }
+  .clip-beats { font-size: 0.42rem; }
+  .scratch-rack { flex: none; width: 58px; }
+  .kraft-bag { flex: none; width: 34px; height: 56px; }
+  .brand-chinese { font-size: 1.15rem; letter-spacing: 0; }
+  .brand-english { display: none; }
+  .marquee-sign { padding: 6px 10px; }
+  .take-stuck { font-size: 0.68rem; padding: 4px 9px; }
+}

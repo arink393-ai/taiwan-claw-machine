@@ -474,12 +474,13 @@ class ClawPhysics {
   }
 
   // 爪子合起來的程度：電壓越高閉得越緊
+  // 強拍閉得特別緊、弱拍鬆鬆的，是玩家「看爪」判斷拍數的線索
   gripOpenRatio() {
-    return 0.34 - 0.22 * this.grabPower;
+    return 0.46 - 0.4 * this.grabPower;
   }
 
   carryOpenRatio() {
-    return 0.34 - 0.22 * this.carryPower;
+    return 0.46 - 0.4 * this.carryPower;
   }
 
   // 爪尖夾取點：爪子中心往下約 22px，視覺上就是三個爪尖圍起來的位置
