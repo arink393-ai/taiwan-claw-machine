@@ -63,6 +63,8 @@ class ClawPhysics {
       dampening: 0.985,
       openRatio: 0.8,
       holdingPrize: null,
+      swing: 0,
+      releaseOnLift: false,
       dropAttemptDone: false
     };
 
@@ -186,6 +188,8 @@ class ClawPhysics {
         c.throwing = true;
         c.offset = Math.sin(c.angle) * c.cableLength;
         c.offVel = c.angleVel * c.cableLength * Math.cos(c.angle) * 1.35;
+        // 甩爪程度 0~1：甩得越大越容易夾住；直上直下(≈0)則容易夾了馬上鬆開
+        c.swing = Math.min(1, Math.abs(c.offVel) / 80);
       }
       c.offVel *= Math.max(0, 1 - 0.75 * dt);
       c.offset += c.offVel * dt;
@@ -395,15 +399,35 @@ class ClawPhysics {
     }
 
     if (closestDoll) {
-      const successChance = Math.max(0.2, (this.grabPower * 1.2) - (closestDoll.type.catchDifficulty * 0.35));
+      // 甩爪帶著動能，爪尖更容易卡進娃娃：甩得越大越好夾
+      const swingBonus = this.claw.swing * 0.2;
+      const successChance = Math.max(0.2, (this.grabPower * 1.2) - (closestDoll.type.catchDifficulty * 0.35) + swingBonus);
 
       if (Math.random() <= successChance || this.settings.isGuaranteed) {
         this.claw.holdingPrize = closestDoll;
         closestDoll.isGrasped = true;
+        // 直上直下夾住，爪子沒有咬進去，一提起來就容易放開，娃娃留在原地
+        const straight = 1 - this.claw.swing;
+        this.claw.releaseOnLift = !this.settings.isGuaranteed && Math.random() < 0.75 * straight * straight;
         return true;
       }
     }
     return false;
+  }
+
+  // 開始上升時呼叫：直上直下的夾取可能一提起就鬆開，娃娃停在原地
+  checkReleaseOnLift() {
+    if (!this.claw.releaseOnLift) return false;
+    this.claw.releaseOnLift = false;
+    const doll = this.claw.holdingPrize;
+    if (!doll) return false;
+    doll.isGrasped = false;
+    doll.vx = 0;
+    doll.vy = 0;
+    this.claw.holdingPrize = null;
+    this.claw.dropAttemptDone = true;
+    if (window.clawAudio) window.clawAudio.playClawSnap();
+    return true;
   }
 
   // 二段放爪檢測
@@ -414,7 +438,9 @@ class ClawPhysics {
 
     // 搬運電壓不夠，越重的獎品越容易中途鬆脫
     const heavy = (this.claw.holdingPrize.type.weight - 1) * 0.3;
-    const dropChance = Math.max(0, Math.min(0.98, 1.0 - (this.carryPower * 1.1) + heavy));
+    // 甩爪夾得比較牢，直上直下則比較容易掉
+    const grip = 1 - this.claw.swing * 0.5;
+    const dropChance = Math.max(0, Math.min(0.98, (1.0 - (this.carryPower * 1.1) + heavy) * grip));
     if (Math.random() < dropChance) {
       const dropped = this.claw.holdingPrize;
       dropped.isGrasped = false;

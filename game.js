@@ -238,10 +238,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // 爪子閉合後短暫停頓 0.35 秒開始上升
     setTimeout(() => {
       state.mode = 'ASCENDING';
+      const slipped = physics.checkReleaseOnLift();
       elBtnDrop.disabled = true;
       const cap = elBtnDrop.querySelector('.btn-text');
       if (cap) cap.textContent = '上升中';
-      elActionText.textContent = '爪子上升中...';
+      elActionText.textContent = slipped ? '直上直下沒夾牢，一提就鬆開了！' : '爪子上升中...';
     }, 350);
   }
 
