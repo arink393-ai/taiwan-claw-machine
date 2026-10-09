@@ -638,23 +638,69 @@
   // ------------------------------------------------------------------
   // 公仔盒
   // ------------------------------------------------------------------
+  // ---- 公仔盒內的小圖案 ----
+  function drawTopIcon(ctx, R) {
+    // 戰鬥陀螺
+    sphere(ctx, 0, 0, R, '#cfd6e6', 0.5, 0.3);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * TAU;
+      tri(ctx, [[Math.cos(a - 0.2) * R * 0.95, Math.sin(a - 0.2) * R * 0.95], [Math.cos(a) * R * 1.3, Math.sin(a) * R * 1.3], [Math.cos(a + 0.2) * R * 0.95, Math.sin(a + 0.2) * R * 0.95]], '#7a4bd8', 2);
+    }
+    sphere(ctx, 0, 0, R * 0.72, '#7a4bd8', 0.4, 0.3);
+    sphere(ctx, 0, 0, R * 0.4, '#ffd54a', 0.5, 0.2);
+    ctx.fillStyle = '#fff'; starPath(ctx, 0, 0, R * 0.26, R * 0.1); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    for (const k of [-1, 1]) { ctx.beginPath(); ctx.arc(0, 0, R * 1.45, k * 0.3 + 0.4, k * 0.3 + 1.0); ctx.stroke(); }
+  }
+
+  function drawFanIcon(ctx, R) {
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = R * 0.14;
+    ctx.beginPath(); ctx.arc(0, 0, R * 1.1, 0, TAU); ctx.stroke();
+    for (let i = 0; i < 3; i++) {
+      ctx.save(); ctx.rotate((i / 3) * TAU + 0.3); ctx.translate(R * 0.5, 0);
+      ellG(ctx, 0, 0, R * 0.55, R * 0.3, '#8fd3ff', 0.4, 0.5, 0.2);
+      ctx.restore();
+    }
+    sphere(ctx, 0, 0, R * 0.25, '#6a4be0', 0.5, 0.2);
+  }
+
+  function drawMonsterIcon(ctx, R) {
+    for (const d of [-1, 1]) tri(ctx, [[d * R * 0.45, -R * 0.75], [d * R * 0.7, -R * 1.25], [d * R * 0.15, -R * 0.9]], '#ffd54a', 3);
+    sphere(ctx, 0, 0, R, '#7be0a8', 0.45, 0.3);
+    for (const d of [-1, 1]) { sphere(ctx, d * R * 0.35, -R * 0.15, R * 0.28, '#fff', 0.1, 0.1); ell(ctx, d * R * 0.38, -R * 0.12, R * 0.12, R * 0.16, INK); }
+    ctx.fillStyle = '#3a2a3f'; ctx.beginPath(); ctx.ellipse(0, R * 0.45, R * 0.45, R * 0.28, 0, 0, Math.PI); ctx.fill();
+    ctx.fillStyle = '#fff'; for (const sx of [-0.25, 0, 0.25]) ctx.fillRect(sx * R - R * 0.07, R * 0.45, R * 0.14, R * 0.12);
+    blush(ctx, R * 0.25, R * 0.62, R * 0.12);
+  }
+
+  // 公仔盒：可調比例 (w/h/dx)、圖案 (chibi 或自訂 icon)、收縮膜效果
   function drawFigureBox(ctx, r, o) {
-    const w = r * 1.5, h = r * 1.95, dx = r * 0.36, dy = -r * 0.36;
+    const w = r * (o.w || 1.5), h = r * (o.h || 1.95), dx = r * (o.dx || 0.36), dy = -dx;
     const x0 = -(w + dx) / 2, x1 = x0 + w;
     const y1 = (h - dy) / 2, y0 = y1 - h;
 
     // 吊卡掛孔
-    rr(ctx, (x0 + x1) / 2 + dx / 2 - r * 0.2, y0 + dy - r * 0.16, r * 0.4, r * 0.2, r * 0.08);
-    ctx.fillStyle = shade(o.c0, 0.2); ctx.fill();
-    ell(ctx, (x0 + x1) / 2 + dx / 2, y0 + dy - r * 0.06, r * 0.06, r * 0.05, 'rgba(60,30,80,.6)');
+    if (!o.noHang) {
+      rr(ctx, (x0 + x1) / 2 + dx / 2 - r * 0.2, y0 + dy - r * 0.16, r * 0.4, r * 0.2, r * 0.08);
+      ctx.fillStyle = shade(o.c0, 0.2); ctx.fill();
+      ell(ctx, (x0 + x1) / 2 + dx / 2, y0 + dy - r * 0.06, r * 0.06, r * 0.05, 'rgba(60,30,80,.6)');
+    }
 
     box3d(ctx, x0, y0, x1, y1, dx, dy,
       lg(ctx, x0, y0, x1, y1, [shade(o.c0, 0.2), o.c0, o.c1]),
       shade(o.c0, 0.45), shade(o.c1, -0.25));
 
-    // 頂部標題條
-    ctx.fillStyle = o.accent; ctx.fillRect(x0 + 1, y0 + 1, w - 2, h * 0.15);
-    for (let i = 0; i < 3; i++) sparkle(ctx, x0 + w * (0.25 + i * 0.25), y0 + h * 0.08, r * 0.09, '#fff');
+    // 頂部標題條 + 字樣
+    const hh = h * 0.15;
+    ctx.fillStyle = o.accent; ctx.fillRect(x0 + 1, y0 + 1, w - 2, hh);
+    if (o.label) {
+      ctx.font = `900 ${Math.round(hh * 0.62)}px "Changa One", "Noto Sans TC", sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(o.label, x0 + w / 2, y0 + hh / 2 + 1, w - 6);
+    } else {
+      for (let i = 0; i < 3; i++) sparkle(ctx, x0 + w * (0.25 + i * 0.25), y0 + h * 0.08, r * 0.09, '#fff');
+    }
 
     // 透明展示窗
     const wx = x0 + w * 0.1, wy = y0 + h * 0.2, ww = w * 0.8, wh = h * 0.56;
@@ -666,24 +712,46 @@
     ctx.fillStyle = 'rgba(255,255,255,.55)';
     heartPath(ctx, wx + ww * 0.82, wy + wh * 0.12, r * 0.07); ctx.fill();
     ctx.save();
-    ctx.translate(wx + ww / 2, wy + wh * 0.5);
-    drawChibi(ctx, r * 0.4, o.figure);
+    ctx.translate(wx + ww / 2, wy + wh * 0.52);
+    const R = Math.min(wh * 0.39, ww * 0.4);
+    if (o.icon) o.icon(ctx, R * 0.9); else drawChibi(ctx, R, o.figure);
     ctx.restore();
-    // 壓克力反光
     ctx.fillStyle = 'rgba(255,255,255,.28)';
     ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx + ww * 0.55, wy); ctx.lineTo(wx, wy + wh * 0.6); ctx.closePath(); ctx.fill();
     ctx.restore();
     rr(ctx, wx, wy, ww, wh, r * 0.12);
     ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.8; ctx.stroke();
 
-    // 底部標籤條
-    ctx.fillStyle = o.accent2; ctx.fillRect(x0 + 1, y0 + h * 0.8, w - 2, h * 0.19);
-    for (let i = 0; i < 3; i++) {
-      ctx.fillStyle = 'rgba(255,255,255,.9)';
-      heartPath(ctx, x0 + w * (0.25 + i * 0.25), y0 + h * 0.895, r * 0.075); ctx.fill();
+    // 底部標籤條：愛心或條碼
+    const by = y0 + h * 0.8, bh = h * 0.19;
+    ctx.fillStyle = o.accent2; ctx.fillRect(x0 + 1, by, w - 2, bh);
+    if (o.barcode) {
+      ctx.fillStyle = '#fff'; ctx.fillRect(x0 + w * 0.12, by + bh * 0.15, w * 0.5, bh * 0.7);
+      ctx.fillStyle = '#222';
+      for (let i = 0; i < 16; i++) ctx.fillRect(x0 + w * 0.14 + i * (w * 0.46 / 16), by + bh * 0.22, (i % 3 + 1) * 0.7, bh * 0.56);
+      ctx.fillStyle = '#ffd54a'; ctx.fillRect(x0 + w * 0.68, by + bh * 0.2, w * 0.2, bh * 0.6);
+    } else {
+      for (let i = 0; i < 3; i++) {
+        ctx.fillStyle = 'rgba(255,255,255,.9)';
+        heartPath(ctx, x0 + w * (0.25 + i * 0.25), by + bh * 0.5, r * 0.075); ctx.fill();
+      }
     }
     ctx.fillStyle = 'rgba(255,255,255,.28)';
     ctx.fillRect(x0 + 1, y0 + 1, w * 0.12, h - 2);
+
+    // 透明收縮膜：斜向反光 + 皺褶 + 角落亮點
+    if (o.wrap) {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
+      ctx.fillStyle = 'rgba(255,255,255,.16)';
+      ctx.beginPath(); ctx.moveTo(x0 + w * 0.35, y0); ctx.lineTo(x0 + w * 0.6, y0); ctx.lineTo(x0 + w * 0.1, y1); ctx.lineTo(x0 - w * 0.15, y1); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 0.9;
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath(); ctx.moveTo(x1 - w * 0.05, y0 + h * (0.2 + i * 0.2)); ctx.lineTo(x1 - w * (0.25 + i * 0.02), y0 + h * (0.28 + i * 0.2)); ctx.stroke();
+      }
+      ctx.restore();
+      sparkle(ctx, x1 - r * 0.12, y0 + r * 0.14, r * 0.12, 'rgba(255,255,255,.95)');
+    }
   }
 
   // ------------------------------------------------------------------
@@ -789,6 +857,13 @@
     { id: 'fig_magic',  cat: 'figurebox', name: '魔法星星公仔盒', rarity: 'R',  radius: 31, weight: 1.35, catchDifficulty: 0.70, catchRadius: 34, spawn: 4, perk: '方盒要夾邊角 用二停卡住', draw: (c, r) => drawFigureBox(c, r, { c0: '#ff8fc8', c1: '#e0489a', accent: '#ffd54a', accent2: '#c93a8e', bg0: '#ffe3f4', bg1: '#d9b8ff', figure: FIG_MAGIC }) },
     { id: 'fig_robot',  cat: 'figurebox', name: '機甲戰士公仔盒', rarity: 'R',  radius: 31, weight: 1.45, catchDifficulty: 0.75, catchRadius: 34, spawn: 4, perk: '硬殼重盒 考驗爪力', draw: (c, r) => drawFigureBox(c, r, { c0: '#5fb8ff', c1: '#2f7fe0', accent: '#ffd54a', accent2: '#2866c2', bg0: '#e0f4ff', bg1: '#a9d4ff', figure: FIG_ROBOT }) },
     { id: 'fig_dino',   cat: 'figurebox', name: '恐龍派對公仔盒', rarity: 'R',  radius: 31, weight: 1.35, catchDifficulty: 0.70, catchRadius: 34, spawn: 4, perk: '亮綠色盒身 最顯眼', draw: (c, r) => drawFigureBox(c, r, { c0: '#7fdc9f', c1: '#37b36b', accent: '#ff9a3d', accent2: '#2c9a5a', bg0: '#f0ffd9', bg1: '#b8f0c8', figure: FIG_DINO }) },
+    // 實機常見的盒裝景品／公仔盒：比例各異、有的包收縮膜
+    { id: 'fb_qposket', cat: 'figurebox', name: 'Q版少女景品盒', rarity: 'R', radius: 34, weight: 1.4, catchDifficulty: 0.70, catchRadius: 36, spawn: 4, perk: '高瘦盒身 夾上緣最穩', draw: (c, r) => drawFigureBox(c, r, { w: 1.25, h: 2.1, c0: '#ffd6ea', c1: '#ff8fc0', accent: '#ff5fa8', accent2: '#d93f87', bg0: '#fff0f8', bg1: '#ffc6e2', label: 'Qposket', wrap: true, figure: { hat: 'bunny', hatColor: '#fff', hair: '#ffb3d9', outfit: '#ff6fb0' } }) },
+    { id: 'fb_hero', cat: 'figurebox', name: '英雄動漫景品盒', rarity: 'R', radius: 34, weight: 1.55, catchDifficulty: 0.78, catchRadius: 36, spawn: 4, perk: '深色重盒 要夾邊角', draw: (c, r) => drawFigureBox(c, r, { w: 1.6, h: 2.0, c0: '#4a5a9a', c1: '#1c2347', accent: '#e5301f', accent2: '#10142e', bg0: '#9fc0ff', bg1: '#4a6fd8', label: 'HERO', barcode: true, wrap: true, figure: { hair: '#ffb21f', outfit: '#e5301f', hat: 'star' } }) },
+    { id: 'fb_top', cat: 'figurebox', name: '戰鬥陀螺盒', rarity: 'N', radius: 32, weight: 1.15, catchDifficulty: 0.55, catchRadius: 36, spawn: 5, perk: '扁平寬盒 好卡爪', draw: (c, r) => drawFigureBox(c, r, { w: 2.0, h: 1.4, dx: 0.4, c0: '#ffffff', c1: '#b9a8ee', accent: '#7a4bd8', accent2: '#3d2a8c', bg0: '#f2ecff', bg1: '#b9a3ff', label: 'BEYSUPER', barcode: true, wrap: true, noHang: true, icon: drawTopIcon }) },
+    { id: 'fb_fan', cat: 'figurebox', name: '迷你風扇盒', rarity: 'N', radius: 30, weight: 1.1, catchDifficulty: 0.5, catchRadius: 34, spawn: 5, perk: '方正小盒 好夾好抓', draw: (c, r) => drawFigureBox(c, r, { w: 1.55, h: 1.6, c0: '#e3dcff', c1: '#9a87e8', accent: '#6a4be0', accent2: '#4a2fb0', bg0: '#f4f1ff', bg1: '#cdbfff', label: 'USB FAN', barcode: true, noHang: true, icon: drawFanIcon }) },
+    { id: 'fb_monster', cat: 'figurebox', name: '潮玩小怪獸盒', rarity: 'R', radius: 32, weight: 1.3, catchDifficulty: 0.65, catchRadius: 35, spawn: 4, perk: '潮玩系列 顏色亮眼', draw: (c, r) => drawFigureBox(c, r, { w: 1.3, h: 1.85, c0: '#c9f5dc', c1: '#58c98f', accent: '#ff9a3d', accent2: '#2a9a66', bg0: '#fffbd9', bg1: '#b8f0c8', label: 'MONSTER', wrap: true, icon: drawMonsterIcon }) },
+    { id: 'fb_mecha', cat: 'figurebox', name: '機器人模型盒', rarity: 'N', radius: 33, weight: 1.4, catchDifficulty: 0.7, catchRadius: 36, spawn: 4, perk: '長方模型盒 重心偏一邊', draw: (c, r) => drawFigureBox(c, r, { w: 1.75, h: 1.5, c0: '#cfe0f5', c1: '#6e90c4', accent: '#1f4fd6', accent2: '#16336e', bg0: '#e8f4ff', bg1: '#9ec4f0', label: 'MECHA', barcode: true, wrap: true, noHang: true, figure: FIG_ROBOT }) },
     { id: 'blind_star', cat: 'blindbox',  name: '星願精靈盲盒',   rarity: 'R',  radius: 29, weight: 1.2,  catchDifficulty: 0.60, catchRadius: 34, spawn: 6, perk: '拆開有機會抽到隱藏款', blind: true, draw: (c, r) => drawBlindBox(c, r, { c0: '#9b7bff', c1: '#6a4be0', ribbon: '#ffd54a', ink: '#4a2fb0' }) },
     { id: 'blind_sweet', cat: 'blindbox', name: '甜點好朋友盲盒', rarity: 'R',  radius: 29, weight: 1.2,  catchDifficulty: 0.60, catchRadius: 34, spawn: 6, perk: '拆開有機會抽到隱藏款', blind: true, draw: (c, r) => drawBlindBox(c, r, { c0: '#ff9fc4', c1: '#f0629a', ribbon: '#7be0c3', ink: '#b8346b' }) },
     { id: 'blind_gold', cat: 'blindbox',  name: '黃金限定盲盒',   rarity: 'SR', radius: 29, weight: 1.25, catchDifficulty: 0.65, catchRadius: 34, spawn: 2, perk: '稀有以上必中 隱藏款機率大增', blind: true, gold: true, draw: (c, r) => drawBlindBox(c, r, { c0: '#ffe27a', c1: '#f0a91a', ribbon: '#ff4d6a', ink: '#b86e00', gold: true }) },

@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     winOpen: false,        // 出貨卡片開啟時暫停倒數與操作
     releaseScheduled: false,
     tickets: 0,           // 兌換券：每夾出一個獎品就有，可換夾換品或刮刮樂
+    clearBonus: false,    // 剛清檯：關掉出貨卡片後要顯示清檯獎
     pendingSize: '標準',
     pendingPrize: null     // 目前出貨卡片上的獎品 (盲盒會在此被拆開)
   };
@@ -130,6 +131,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 保夾判斷
     const isGuaranteed = state.accumulatedPrice >= state.guaranteePrice;
     physics.settings.isGuaranteed = isGuaranteed;
+
+    physics.guaranteePrice = state.guaranteePrice;
+    physics.accumulatedPrice = state.accumulatedPrice;
 
     // 爪力電壓顯示 (保夾時鎖在最大)
     elDispVoltage.textContent = `${physics.effectiveGrabVoltage}V / ${physics.effectiveCarryVoltage}V`;
@@ -319,6 +323,41 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { elChuteFlap.style.transform = ''; }, 600);
   }
 
+  // 清檯獎：把檯面上的獎品全部夾光 → 兌換券 +30、加送 5 局、黃金盲盒大獎，並自動補貨
+  const CLEAR_REWARD = { tickets: 30, credits: 5, prizeId: 'ex_gold' };
+
+  physics.onTableCleared = () => {
+    state.tickets += CLEAR_REWARD.tickets;
+    state.collection[CLEAR_REWARD.prizeId] = (state.collection[CLEAR_REWARD.prizeId] || 0) + 1;
+    state.clearBonus = true;
+    saveGame();
+    updateDisplays();
+  };
+
+  function showClearCard() {
+    const prize = PRIZE_TYPES.find(t => t.id === CLEAR_REWARD.prizeId);
+    state.winOpen = true;
+    state.clearBonus = false;
+    elWinCard.classList.remove('shaking');
+    elWinCard.classList.add('revealed');
+    elWinTitle.textContent = '🎊 清檯獎！！';
+    elWinPreview.innerHTML = `<img src="${getPrizeSprite(prize.id, 140)}" alt="${prize.name}">`;
+    elWinPrizeName.textContent = prize.name;
+    elWinRarity.innerHTML = rarityBadgeHTML('SSR');
+    elWinDesc.textContent = `檯面全部夾光！兌換券 +${CLEAR_REWARD.tickets}、加送 ${CLEAR_REWARD.credits} 局`;
+    elWinSpent.textContent = `累計投幣: ${state.totalCoinsInserted} 元`;
+    elWinTag.textContent = '🧹 清檯成功';
+    elWinTag.style.background = '#ffd54a';
+    elBtnOpenBlind.classList.add('hidden');
+    elBtnCollectPrize.classList.remove('hidden');
+    elBtnCollectPrize.textContent = '收下並重新補貨';
+    elWinOverlay.classList.remove('hidden');
+    state.pendingPrize = null;
+    state.afterClear = true;
+    window.clawAudio.playReveal('SSR');
+    physics.burst(physics.width / 2, physics.height / 2, 110);
+  }
+
   // 拆盲盒：搖晃 → 閃光 → 揭曉公仔
   elBtnOpenBlind.addEventListener('click', () => {
     const box = state.pendingPrize;
@@ -358,6 +397,15 @@ document.addEventListener('DOMContentLoaded', () => {
     elWinOverlay.classList.add('hidden');
     state.winOpen = false;
     window.clawAudio.playClick();
+
+    if (state.afterClear) {
+      // 清檯獎領完：補貨並加送局數
+      state.afterClear = false;
+      physics.initDolls();
+      addCredits(CLEAR_REWARD.credits);
+    } else if (state.clearBonus) {
+      showClearCard();
+    }
   }
 
   // 主更新循環 (RequestAnimationFrame)
@@ -860,7 +908,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 機頂夾換區展示：高價值的盒裝公仔、盲盒
   const shelfItems = document.getElementById('shelf-items');
-  ['ex_god', 'blind_gold', 'fig_robot', 'blind_star', 'ex_robot', 'fig_magic', 'blind_sweet', 'ex_gold'].forEach((id, i) => {
+  ['ex_god', 'fb_hero', 'blind_gold', 'fb_qposket', 'fig_robot', 'fb_top', 'blind_star', 'ex_robot', 'fb_monster', 'blind_sweet', 'ex_gold'].forEach((id, i) => {
     const img = document.createElement('img');
     img.src = getPrizeSprite(id, 72);
     img.alt = '';

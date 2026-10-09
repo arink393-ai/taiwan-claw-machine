@@ -84,6 +84,8 @@ class ClawPhysics {
 
     this.fallingWins = [];
     this.particles = [];
+    this.guaranteePrice = 300;   // 由 game.js 同步，顯示在保證取物告示上
+    this.accumulatedPrice = 0;
     this.time = 0;
     this.lastDt = 0.016;
 
@@ -170,7 +172,7 @@ class ClawPhysics {
       vx: (Math.random() - 0.5) * 5,
       vy: 0,
       radius: type.radius * scale,
-      rotation: (Math.random() - 0.5) * 0.4,
+      rotation: (Math.random() - 0.5) * (type.cat === 'figurebox' ? 1.2 : 0.4),
       rotVel: 0,
       isGrasped: false,
       settled: false
@@ -399,6 +401,11 @@ class ClawPhysics {
     if (this.onPrizeWon) {
       this.onPrizeWon(doll.type, doll);
     }
+
+    // 清檯：最後一件也被夾出洞口
+    if (this.dolls.length === 0 && this.onTableCleared) {
+      this.onTableCleared();
+    }
   }
 
   // 電壓 → 0~1 的爪力比例 (8V ~ 32V)
@@ -560,6 +567,7 @@ class ClawPhysics {
 
     ctx.drawImage(this.backdrop, 0, 0, this.width, this.height);
     this.renderAmbient(ctx);
+    this.renderNotices(ctx);
     this.renderLanes(ctx);
     this.renderShadows(ctx);
 
@@ -944,6 +952,90 @@ class ClawPhysics {
     ctx.fillStyle = A.lg(ctx, -6, 0, 6, 0, ['#7e8594', '#f4f6fa', '#7e8594']);
     ctx.fill();
 
+    ctx.restore();
+  }
+
+  // 背牆告示：顧客須知、保證取物看板、卡洞自取小紙條 (實機一定會貼)
+  renderNotices(ctx) {
+    const A = window.PrizeArt;
+    const W = this.width;
+    const guaranteed = this.accumulatedPrice >= this.guaranteePrice;
+    const pulse = 0.5 + 0.5 * Math.sin(this.time * 6);
+
+    // 顧客須知 (左右各一張)
+    const sheet = (x, y, rot) => {
+      ctx.save();
+      ctx.translate(x, y); ctx.rotate(rot);
+      ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(2, 3, 62, 84);
+      ctx.fillStyle = '#fbfcff'; ctx.fillRect(0, 0, 62, 84);
+      ctx.strokeStyle = '#c6cbd8'; ctx.lineWidth = 0.8; ctx.strokeRect(0, 0, 62, 84);
+      ctx.fillStyle = '#d6281f';
+      ctx.font = '900 6.5px "Noto Sans TC", sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText('※親愛的顧客請注意※', 31, 5);
+      ctx.fillStyle = '#b9bfcd';
+      for (let i = 0; i < 9; i++) ctx.fillRect(6, 17 + i * 7, i % 3 === 2 ? 34 : 50, 2.4);
+      ctx.fillStyle = '#e8ecf5'; ctx.fillRect(6, 78, 24, 2.4);
+      ctx.restore();
+    };
+    sheet(112, 96, -0.03);
+    sheet(W - 112 - 62, 100, 0.025);
+
+    // 保證取物看板
+    const sx = W / 2 - 58, sy = 82, sw = 116, sh = 88;
+    ctx.save();
+    if (guaranteed) { ctx.shadowColor = '#ffe14a'; ctx.shadowBlur = 10 + pulse * 14; }
+    ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fillRect(sx + 3, sy + 4, sw, sh);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffd23f'; ctx.fillRect(sx, sy, sw, sh);
+    ctx.strokeStyle = '#e0a400'; ctx.lineWidth = 2; ctx.strokeRect(sx, sy, sw, sh);
+    ctx.restore();
+
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffeb7a'; ctx.fillRect(sx + 3, sy + 3, sw - 6, 26);
+    ctx.fillStyle = '#d6281f'; ctx.font = '900 11px "Noto Sans TC", sans-serif';
+    ctx.fillText('產品售價', sx + 8, sy + 11);
+    ctx.fillStyle = '#2b2b2b'; ctx.font = '900 12px "Noto Sans TC", sans-serif';
+    ctx.fillText('每局  $ 10', sx + 8, sy + 23);
+
+    ctx.fillStyle = guaranteed ? `rgb(${220 + pulse * 35},40,30)` : '#e5301f';
+    ctx.fillRect(sx + 3, sy + 31, sw - 6, 24);
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+    ctx.font = '900 16px "Noto Sans TC", sans-serif';
+    ctx.fillText(guaranteed ? '保夾啟動！' : '保證取物', sx + sw / 2, sy + 44);
+
+    ctx.fillStyle = '#fff6c9'; ctx.fillRect(sx + 3, sy + 57, sw - 6, 28);
+    ctx.fillStyle = '#2b2b2b'; ctx.font = '900 13px "Noto Sans TC", sans-serif';
+    ctx.fillText(`累計 $${this.guaranteePrice} 保證`, sx + sw / 2, sy + 66);
+    const bx = sx + 9, bw = sw - 18, by = sy + 74;
+    ctx.fillStyle = '#d9d3b0'; ctx.fillRect(bx, by, bw, 6);
+    ctx.fillStyle = guaranteed ? '#e5301f' : '#27b98a';
+    ctx.fillRect(bx, by, bw * Math.min(1, this.accumulatedPrice / this.guaranteePrice), 6);
+
+    // 清檯獎看板：剩餘件數
+    const left = this.dolls.length;
+    const cy = sy + sh + 8;
+    const g = ctx.createLinearGradient(sx, 0, sx + sw, 0);
+    g.addColorStop(0, '#b8860b'); g.addColorStop(0.5, '#ffe27a'); g.addColorStop(1, '#b8860b');
+    ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fillRect(sx + 2, cy + 3, sw, 24);
+    ctx.fillStyle = g; ctx.fillRect(sx, cy, sw, 24);
+    ctx.strokeStyle = '#7a5200'; ctx.lineWidth = 1.5; ctx.strokeRect(sx, cy, sw, 24);
+    ctx.fillStyle = '#7a1d12'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '900 12px "Noto Sans TC", sans-serif';
+    ctx.fillText(left > 0 ? `清檯獎 · 剩 ${left} 件` : '清檯成功！', sx + sw / 2, cy + 12);
+    ctx.fillStyle = '#e5301f'; A.starPath(ctx, sx + 11, cy + 12, 6, 2.6); ctx.fill();
+    A.starPath(ctx, sx + sw - 11, cy + 12, 6, 2.6); ctx.fill();
+
+    // 卡洞自取 小紙條
+    ctx.save();
+    ctx.translate(W / 2 + 70, 112); ctx.rotate(0.05);
+    ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fillRect(2, 3, 52, 38);
+    ctx.fillStyle = '#2f62d9'; ctx.fillRect(0, 0, 52, 38);
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '900 11px "Noto Sans TC", sans-serif';
+    ctx.fillText('卡洞自取', 26, 13);
+    ctx.font = '700 8px "Noto Sans TC", sans-serif';
+    ctx.fillText('購一取一', 26, 28);
     ctx.restore();
   }
 
