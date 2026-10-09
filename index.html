@@ -41,6 +41,26 @@
 
     <!-- 夾娃娃機台本體 (經典飛絡力亮黃色機殼) -->
     <main class="machine-wrapper">
+      <!-- 機頂擺設：夾換品、刮刮樂、夾出登記板、牛皮紙袋 (實機常見) -->
+      <div class="machine-topper" id="machine-topper">
+        <div class="clipboard" id="clipboard" title="夾出登記板">
+          <div class="clip-top"></div>
+          <div class="clip-title">夾出一個<br>登記一次</div>
+          <div class="clip-tally" id="clip-tally">—</div>
+        </div>
+        <button class="topper-shelf" id="topper-shelf" title="夾換區：用兌換券換限定品">
+          <div class="shelf-items" id="shelf-items"></div>
+          <div class="shelf-sign">夾換區 · 🎫<b id="ticket-count">0</b> 券</div>
+        </button>
+        <button class="scratch-rack" id="scratch-rack" title="刮刮樂：3 張兌換券 1 張">
+          <span class="scratch-card c1"><i>刮刮樂</i></span>
+          <span class="scratch-card c2"><i>刮刮樂</i></span>
+          <span class="scratch-card c3"><i>刮刮樂</i></span>
+          <span class="rack-sign">刮刮樂 3 券</span>
+        </button>
+        <div class="kraft-bag"><span>S</span></div>
+      </div>
+
       <div class="claw-machine feiluoli-cabinet">
         
         <!-- 頂部招牌燈箱 (Marquee) -->
@@ -53,11 +73,10 @@
           </div>
           <div class="marquee-sign">
             <div class="logo-wrap">
-              <span class="brand-chinese">飛絡力</span>
-              <span class="brand-english">FEI LOU LI</span>
+              <span class="brand-chinese">選物販賣機<em>2代</em></span>
+              <span class="brand-english">飛絡力 FEI LOU LI</span>
             </div>
             <div class="marquee-subtitle">
-              <span>選物販賣機 二代</span>
               <span class="pill-guarantee" id="marquee-guarantee-pill">保證取物</span>
             </div>
           </div>
@@ -153,6 +172,7 @@
               <div class="control-label">方向搖桿 (可甩爪)</div>
               <div class="joystick-base" id="joystick-base">
                 <div class="joystick-pad"></div>
+                <div class="joystick-crystal"></div>
                 <div class="joystick-stick" id="joystick-stick">
                   <div class="joystick-ball" id="joystick-ball"></div>
                 </div>
@@ -226,6 +246,40 @@
       <div class="stat-item">勝率: <b id="stat-win-rate">0.0%</b></div>
       <div class="stat-item quick-keys">快捷鍵: <b>[WASD] 移動</b> <b>[空白鍵] 下爪/二停</b> <b>[C] 投幣</b> <b>[R] 快速補貨</b></div>
     </footer>
+  </div>
+
+  <!-- 彈出視窗：夾換區 & 刮刮樂 -->
+  <div id="modal-exchange" class="modal-backdrop hidden">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3>🎫 夾換區 &amp; 刮刮樂</h3>
+        <button class="modal-close" id="btn-close-exchange">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="ex-tip">每夾出一個獎品就有兌換券：普通 1 張、稀有 2 張、超稀有 3 張、隱藏款 5 張。</p>
+        <div class="ex-tickets">目前兌換券 <b id="ex-ticket-count">0</b> 張</div>
+
+        <h4 class="ex-h">🎁 夾換限定品</h4>
+        <div id="exchange-grid" class="exchange-grid"></div>
+
+        <h4 class="ex-h">🎰 刮刮樂 <small>（3 張券刮一張）</small></h4>
+        <div class="scratch-wrap">
+          <div class="scratch-board" id="scratch-board">
+            <div class="scratch-result" id="scratch-result">按下「刮一張」開始！</div>
+            <canvas id="scratch-canvas" width="300" height="130"></canvas>
+          </div>
+          <div class="scratch-actions">
+            <button class="btn-primary" id="btn-scratch-buy">🎫 刮一張 (3 券)</button>
+            <button class="btn-secondary" id="btn-scratch-all" disabled>全部刮開</button>
+          </div>
+          <small class="scratch-odds">獎項：加送 1 / 3 / 10 局、保夾金額 +100、大獎＝隱藏款公仔！</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <span></span>
+        <button class="btn-secondary" id="btn-exchange-close2">關閉</button>
+      </div>
+    </div>
   </div>
 
   <!-- 彈出視窗 1: 戰利品背包 -->

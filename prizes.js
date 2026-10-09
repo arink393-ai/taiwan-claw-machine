@@ -22,6 +22,7 @@
     pillow: '🍉 食物抱枕',
     figurebox: '📦 公仔盒',
     capsule: '🥚 扭蛋',
+    exchange: '🎫 夾換限定',
     blindfig: '🎁 盲盒公仔'
   };
 
@@ -791,7 +792,15 @@
     { id: 'blind_star', cat: 'blindbox',  name: '星願精靈盲盒',   rarity: 'R',  radius: 29, weight: 1.2,  catchDifficulty: 0.60, catchRadius: 34, spawn: 6, perk: '拆開有機會抽到隱藏款', blind: true, draw: (c, r) => drawBlindBox(c, r, { c0: '#9b7bff', c1: '#6a4be0', ribbon: '#ffd54a', ink: '#4a2fb0' }) },
     { id: 'blind_sweet', cat: 'blindbox', name: '甜點好朋友盲盒', rarity: 'R',  radius: 29, weight: 1.2,  catchDifficulty: 0.60, catchRadius: 34, spawn: 6, perk: '拆開有機會抽到隱藏款', blind: true, draw: (c, r) => drawBlindBox(c, r, { c0: '#ff9fc4', c1: '#f0629a', ribbon: '#7be0c3', ink: '#b8346b' }) },
     { id: 'blind_gold', cat: 'blindbox',  name: '黃金限定盲盒',   rarity: 'SR', radius: 29, weight: 1.25, catchDifficulty: 0.65, catchRadius: 34, spawn: 2, perk: '稀有以上必中 隱藏款機率大增', blind: true, gold: true, draw: (c, r) => drawBlindBox(c, r, { c0: '#ffe27a', c1: '#f0a91a', ribbon: '#ff4d6a', ink: '#b86e00', gold: true }) },
-    { id: 'capsule',    cat: 'capsule',   name: '夢幻扭蛋球',     rarity: 'N',  radius: 24, weight: 0.7,  catchDifficulty: 0.55, catchRadius: 30, spawn: 6, perk: '圓滾滾易滑 小心滑落', draw: drawCapsule }
+    { id: 'capsule',    cat: 'capsule',   name: '夢幻扭蛋球',     rarity: 'N',  radius: 24, weight: 0.7,  catchDifficulty: 0.55, catchRadius: 30, spawn: 6, perk: '圓滾滾易滑 小心滑落', draw: drawCapsule },
+
+    // 夾換限定：不會出現在機台裡，用兌換券在機頂的「夾換區」換取
+    { id: 'ex_god',   cat: 'exchange', name: '招財神限定公仔盒', rarity: 'SR',  radius: 32, weight: 1.4, catchDifficulty: 0.7, catchRadius: 34, spawn: 0, cost: 15, perk: '夾換限定・財神爺送錢來', exchange: true,
+      draw: (c, r) => drawFigureBox(c, r, { c0: '#ffd23f', c1: '#e08f00', accent: '#e5301f', accent2: '#b51d12', bg0: '#fff3c4', bg1: '#ffd36b', figure: { hat: 'crown', hair: '#4a3a2a', outfit: '#e5301f', glow: true } }) },
+    { id: 'ex_robot', cat: 'exchange', name: '機甲戰士限定大盒', rarity: 'SR',  radius: 32, weight: 1.5, catchDifficulty: 0.75, catchRadius: 34, spawn: 0, cost: 25, perk: '夾換限定・閃亮電鍍版', exchange: true,
+      draw: (c, r) => drawFigureBox(c, r, { c0: '#c9d3e6', c1: '#6b7a99', accent: '#e5301f', accent2: '#3b4660', bg0: '#e8f4ff', bg1: '#8fb4e8', figure: { kind: 'robot', outfit: '#e5301f', accent: '#ffd54a' } }) },
+    { id: 'ex_gold',  cat: 'exchange', name: '黃金盲盒大獎', rarity: 'SSR', radius: 30, weight: 1.3, catchDifficulty: 0.65, catchRadius: 34, spawn: 0, cost: 40, perk: '夾換限定・最高等級', exchange: true,
+      draw: (c, r) => drawBlindBox(c, r, { c0: '#fff0a0', c1: '#e8a200', ribbon: '#e5301f', ink: '#a86800', gold: true }) }
   ];
 
   // ------------------------------------------------------------------

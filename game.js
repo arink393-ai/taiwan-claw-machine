@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     isMotorSoundPlaying: false,
     winOpen: false,        // 出貨卡片開啟時暫停倒數與操作
     releaseScheduled: false,
+    tickets: 0,           // 兌換券：每夾出一個獎品就有，可換夾換品或刮刮樂
     pendingSize: '標準',
     pendingPrize: null     // 目前出貨卡片上的獎品 (盲盒會在此被拆開)
   };
@@ -37,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
       state.collection = raw.collection || {};
       state.totalCoinsInserted = raw.totalCoinsInserted || 0;
       state.prizesWonCount = raw.prizesWonCount || 0;
+      state.tickets = raw.tickets || 0;
     } catch (e) { /* 無痕模式或資料損毀就當作新遊戲 */ }
   }
 
@@ -45,7 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem(SAVE_KEY, JSON.stringify({
         collection: state.collection,
         totalCoinsInserted: state.totalCoinsInserted,
-        prizesWonCount: state.prizesWonCount
+        prizesWonCount: state.prizesWonCount,
+        tickets: state.tickets
       }));
     } catch (e) { /* 儲存失敗不影響遊戲 */ }
   }
@@ -77,6 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const elGuaranteePill = document.getElementById('marquee-guarantee-pill');
 
   // 統計列
+  const elTicketCount = document.getElementById('ticket-count');
+  const elClipTally = document.getElementById('clip-tally');
   const elStatCoins = document.getElementById('stat-total-coins');
   const elStatWins = document.getElementById('stat-prizes-won');
   const elStatWinRate = document.getElementById('stat-win-rate');
@@ -102,6 +107,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const modalCollection = document.getElementById('modal-collection');
   const modalOwner = document.getElementById('modal-owner');
   const modalHelp = document.getElementById('modal-help');
+
+  // 登記板的「正」字記號：5 為一組
+  function tallyString(n) {
+    if (!n) return '—';
+    const groups = Math.floor(n / 5), rest = n % 5;
+    return '正'.repeat(Math.min(groups, 8)) + (groups > 8 ? `×${groups}` : '') + ['', '一', '丅', '下', '止'][rest];
+  }
 
   // 更新儀表板顯示
   function updateDisplays() {
@@ -139,6 +151,10 @@ document.addEventListener('DOMContentLoaded', () => {
       ? ((state.prizesWonCount / (state.totalCoinsInserted / 10)) * 100).toFixed(1)
       : '0.0';
     elStatWinRate.textContent = `${rate}%`;
+
+    // 兌換券與夾出登記板
+    elTicketCount.textContent = state.tickets;
+    elClipTally.textContent = tallyString(state.prizesWonCount);
 
     // 背包徽章
     const totalCollected = Object.values(state.collection).reduce((a, b) => a + b, 0);
@@ -247,6 +263,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 350);
   }
 
+  const TICKET_BY_RARITY = { N: 1, R: 2, SR: 3, SSR: 5 };
+
   // 獲勝出貨事件監聽
   physics.onPrizeWon = (prizeType, doll) => {
     state.pendingSize = doll ? ClawPhysics.sizeLabel(doll.scale) : '標準';
@@ -262,6 +280,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!prizeType.blind) {
       state.collection[prizeType.id] = (state.collection[prizeType.id] || 0) + 1;
     }
+    const gain = TICKET_BY_RARITY[prizeType.rarity] || 1;
+    state.tickets += gain;
+    state.pendingGain = gain;
     state.pendingPrize = prizeType;
     saveGame();
     updateDisplays();
@@ -284,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
     elWinRarity.innerHTML = rarityBadgeHTML(prizeType.rarity) + `<span class="size-chip">${state.pendingSize}尺寸</span>`;
     elWinDesc.textContent = prizeType.blind ? '到底會開出什麼呢？快拆開看看！' : prizeType.perk;
     elWinSpent.textContent = `累計投幣: ${state.totalCoinsInserted} 元`;
-    elWinTag.textContent = wasGuaranteed ? '👑 保夾出貨' : '🎯 技術取物';
+    elWinTag.textContent = (wasGuaranteed ? '👑 保夾出貨' : '🎯 技術取物') + `　🎫 +${state.pendingGain}`;
     elWinTag.style.background = wasGuaranteed ? '#ffd54a' : '#7be0c3';
 
     elBtnOpenBlind.classList.toggle('hidden', !prizeType.blind);
@@ -792,6 +813,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state.collection = {};
     state.totalCoinsInserted = 0;
     state.prizesWonCount = 0;
+    state.tickets = 0;
     saveGame();
     updateDisplays();
   });
@@ -828,10 +850,187 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // -------------------------------------------------------------
+  // 夾換區 & 刮刮樂
+  // -------------------------------------------------------------
+  const modalExchange = document.getElementById('modal-exchange');
+  const exchangeGrid = document.getElementById('exchange-grid');
+  const exTicketCount = document.getElementById('ex-ticket-count');
+  const exchangeItems = PRIZE_TYPES.filter(t => t.exchange);
+  const SCRATCH_COST = 3;
+
+  // 機頂夾換區展示：高價值的盒裝公仔、盲盒
+  const shelfItems = document.getElementById('shelf-items');
+  ['ex_god', 'blind_gold', 'fig_robot', 'blind_star', 'ex_robot', 'fig_magic', 'blind_sweet', 'ex_gold'].forEach((id, i) => {
+    const img = document.createElement('img');
+    img.src = getPrizeSprite(id, 72);
+    img.alt = '';
+    img.style.setProperty('--rot', `${(i % 2 ? 1 : -1) * (2 + (i * 3) % 5)}deg`);
+    shelfItems.appendChild(img);
+  });
+
+  function renderExchange() {
+    exTicketCount.textContent = state.tickets;
+    exchangeGrid.innerHTML = '';
+    exchangeItems.forEach(item => {
+      const owned = state.collection[item.id] || 0;
+      const can = state.tickets >= item.cost;
+      const card = document.createElement('div');
+      card.className = 'exchange-card';
+      card.style.setProperty('--rc', RARITY[item.rarity].color);
+      card.innerHTML = `
+        <img src="${getPrizeSprite(item.id, 84)}" alt="">
+        <div class="ex-name">${item.name}</div>
+        <div class="ex-owned">${owned ? '已擁有 ' + owned : item.perk}</div>
+        <button class="btn-primary ex-btn" ${can ? '' : 'disabled'}>🎫 ${item.cost} 券 兌換</button>`;
+      card.querySelector('button').addEventListener('click', () => {
+        if (state.tickets < item.cost) return;
+        state.tickets -= item.cost;
+        state.collection[item.id] = (state.collection[item.id] || 0) + 1;
+        saveGame();
+        updateDisplays();
+        window.clawAudio.playReveal(item.rarity);
+        renderExchange();
+      });
+      exchangeGrid.appendChild(card);
+    });
+    document.getElementById('btn-scratch-buy').disabled = state.tickets < SCRATCH_COST || scratch.active;
+  }
+
+  function openExchange() {
+    window.clawAudio.playClick();
+    renderExchange();
+    modalExchange.classList.remove('hidden');
+  }
+  document.getElementById('topper-shelf').addEventListener('click', openExchange);
+  document.getElementById('scratch-rack').addEventListener('click', openExchange);
+  document.getElementById('btn-close-exchange').addEventListener('click', () => modalExchange.classList.add('hidden'));
+  document.getElementById('btn-exchange-close2').addEventListener('click', () => modalExchange.classList.add('hidden'));
+
+  // 刮刮樂
+  const SCRATCH_REWARDS = [
+    { w: 35, icon: '🍀', text: '銘謝惠顧，再接再厲！', apply: () => {} },
+    { w: 30, icon: '🪙', text: '加送 1 局！', apply: () => addCredits(1) },
+    { w: 17, icon: '🪙', text: '加送 3 局！', apply: () => addCredits(3) },
+    { w: 10, icon: '🔋', text: '保夾金額 +100！', apply: () => { state.accumulatedPrice += 100; updateDisplays(); } },
+    { w: 6,  icon: '💰', text: '加送 10 局！！', apply: () => addCredits(10) },
+    { w: 2,  icon: '👑', text: '大獎！隱藏款公仔！', apply: () => {
+        const ssr = BLIND_FIGURES.filter(f => f.rarity === 'SSR');
+        const fig = ssr[Math.floor(Math.random() * ssr.length)];
+        state.collection[fig.id] = (state.collection[fig.id] || 0) + 1;
+        return `大獎！獲得隱藏款「${fig.name}」！`;
+      } }
+  ];
+
+  function addCredits(n) {
+    state.credits += n;
+    updateDisplays();
+    if (state.mode === 'IDLE') startNextRound();
+  }
+
+  const scratchCanvas = document.getElementById('scratch-canvas');
+  const scratchCtx = scratchCanvas.getContext('2d');
+  const scratchResult = document.getElementById('scratch-result');
+  const btnScratchBuy = document.getElementById('btn-scratch-buy');
+  const btnScratchAll = document.getElementById('btn-scratch-all');
+  const scratch = { active: false, reward: null, drawing: false, revealed: false };
+
+  function paintCoating() {
+    const W = scratchCanvas.width, H = scratchCanvas.height;
+    scratchCtx.globalCompositeOperation = 'source-over';
+    const g = scratchCtx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, '#d9dde4'); g.addColorStop(0.5, '#f4f6fa'); g.addColorStop(1, '#b9bfca');
+    scratchCtx.fillStyle = g;
+    scratchCtx.fillRect(0, 0, W, H);
+    scratchCtx.fillStyle = 'rgba(120,130,150,.35)';
+    for (let i = 0; i < 160; i++) scratchCtx.fillRect(Math.random() * W, Math.random() * H, 2, 2);
+    scratchCtx.fillStyle = '#7a8296';
+    scratchCtx.font = '900 24px "Noto Sans TC", sans-serif';
+    scratchCtx.textAlign = 'center';
+    scratchCtx.textBaseline = 'middle';
+    scratchCtx.fillText('用手指／滑鼠刮開', W / 2, H / 2);
+  }
+
+  function pickReward() {
+    const total = SCRATCH_REWARDS.reduce((s, r) => s + r.w, 0);
+    let roll = Math.random() * total;
+    for (const r of SCRATCH_REWARDS) { roll -= r.w; if (roll <= 0) return r; }
+    return SCRATCH_REWARDS[0];
+  }
+
+  btnScratchBuy.addEventListener('click', () => {
+    if (state.tickets < SCRATCH_COST || scratch.active) return;
+    state.tickets -= SCRATCH_COST;
+    saveGame();
+    updateDisplays();
+    scratch.active = true;
+    scratch.revealed = false;
+    scratch.reward = pickReward();
+    scratchResult.innerHTML = `<span class="sr-icon">${scratch.reward.icon}</span><span>${scratch.reward.text}</span>`;
+    scratchCanvas.style.opacity = 1;
+    paintCoating();
+    btnScratchAll.disabled = false;
+    window.clawAudio.playClick();
+    renderExchange();
+  });
+
+  function revealScratch() {
+    if (!scratch.active || scratch.revealed) return;
+    scratch.revealed = true;
+    scratchCanvas.style.opacity = 0;
+    const msg = scratch.reward.apply();
+    if (typeof msg === 'string') scratchResult.innerHTML = `<span class="sr-icon">${scratch.reward.icon}</span><span>${msg}</span>`;
+    saveGame();
+    updateDisplays();
+    window.clawAudio.playReveal(scratch.reward.w <= 2 ? 'SSR' : scratch.reward.w <= 10 ? 'R' : 'N');
+    scratch.active = false;
+    btnScratchAll.disabled = true;
+    renderExchange();
+  }
+
+  btnScratchAll.addEventListener('click', revealScratch);
+
+  function scratchAt(clientX, clientY) {
+    const rect = scratchCanvas.getBoundingClientRect();
+    const x = (clientX - rect.left) * (scratchCanvas.width / rect.width);
+    const y = (clientY - rect.top) * (scratchCanvas.height / rect.height);
+    scratchCtx.globalCompositeOperation = 'destination-out';
+    scratchCtx.beginPath();
+    scratchCtx.arc(x, y, 16, 0, Math.PI * 2);
+    scratchCtx.fill();
+  }
+
+  function scratchedRatio() {
+    const { width: W, height: H } = scratchCanvas;
+    const data = scratchCtx.getImageData(0, 0, W, H).data;
+    let clear = 0, total = 0;
+    for (let i = 3; i < data.length; i += 4 * 16) { total++; if (data[i] < 40) clear++; }
+    return clear / total;
+  }
+
+  function scratchMove(e) {
+    if (!scratch.drawing || !scratch.active) return;
+    const p = e.touches ? e.touches[0] : e;
+    scratchAt(p.clientX, p.clientY);
+    e.preventDefault();
+  }
+  scratchCanvas.addEventListener('mousedown', (e) => { scratch.drawing = true; scratchMove(e); });
+  scratchCanvas.addEventListener('touchstart', (e) => { scratch.drawing = true; scratchMove(e); }, { passive: false });
+  scratchCanvas.addEventListener('mousemove', scratchMove);
+  scratchCanvas.addEventListener('touchmove', scratchMove, { passive: false });
+  const scratchEnd = () => {
+    if (!scratch.drawing) return;
+    scratch.drawing = false;
+    if (scratch.active && scratchedRatio() > 0.5) revealScratch();
+  };
+  window.addEventListener('mouseup', scratchEnd);
+  window.addEventListener('touchend', scratchEnd);
+  paintCoating();
+
+  // -------------------------------------------------------------
   // 本機獎品跑馬展示條 + 背景漂浮裝飾
   // -------------------------------------------------------------
   const tickerTrack = document.getElementById('ticker-track');
-  const tickerHTML = PRIZE_TYPES.map(t => {
+  const tickerHTML = PRIZE_TYPES.filter(t => t.spawn > 0).map(t => {
     const r = RARITY[t.rarity];
     return `<div class="ticker-item" style="--rc:${r.color}" title="${t.name}">
       <img src="${getPrizeSprite(t.id, 56)}" alt="${t.name}">
