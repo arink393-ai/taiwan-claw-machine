@@ -70,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const elBtnCoin = document.getElementById('btn-insert-coin');
   const elBtnCoin100 = document.getElementById('btn-insert-100');
   const elCoinSlit = document.getElementById('coin-slot-slit');
+  const elDispVoltage = document.getElementById('disp-voltage');
   const elActionText = document.getElementById('action-status-text');
   const elGuaranteeBulb = document.getElementById('guarantee-bulb');
   const elGuaranteePill = document.getElementById('marquee-guarantee-pill');
@@ -116,6 +117,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 保夾判斷
     const isGuaranteed = state.accumulatedPrice >= state.guaranteePrice;
     physics.settings.isGuaranteed = isGuaranteed;
+
+    // 爪力電壓顯示 (保夾時鎖在最大)
+    elDispVoltage.textContent = `${physics.effectiveGrabVoltage}V / ${physics.effectiveCarryVoltage}V`;
 
     if (isGuaranteed) {
       elGuaranteeBulb.classList.add('active');
@@ -224,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 執行收爪抓取判定
   function triggerClawGrip() {
-    physics.claw.openRatio = 0.15; // 閉合
+    physics.claw.openRatio = physics.gripOpenRatio(); // 閉合：電壓越高閉得越緊
     window.clawAudio.playClawSnap();
 
     // 進行抓取碰撞判定
@@ -352,6 +356,11 @@ document.addEventListener('DOMContentLoaded', () => {
         handleDropButton();
       }
       elDispTimer.textContent = String(Math.max(0, Math.ceil(state.currentTimer))).padStart(2, '0');
+    }
+
+    // 搬運途中爪子鬆緊跟著搬運電壓走 (電壓低會看到爪子鬆鬆的)
+    if ((state.mode === 'ASCENDING' || state.mode === 'RETURNING') && physics.claw.holdingPrize) {
+      physics.claw.openRatio = physics.carryOpenRatio();
     }
 
     // 2. 機台狀態機運作
@@ -696,16 +705,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnClear = document.getElementById('btn-clear-dolls');
   const btnResetAccum = document.getElementById('btn-reset-accumulated');
 
+  // 電壓文字：同時標示強弱
+  function voltageLabel(v) {
+    const p = ClawPhysics.voltagePower(Number(v));
+    const tag = p < 0.25 ? '偏弱' : p < 0.55 ? '中等' : p < 0.85 ? '偏強' : '超強';
+    return `${v} V (${tag})`;
+  }
+
   btnOwner.addEventListener('click', () => {
     // 帶入目前設定值
     setGuarantee.value = state.guaranteePrice;
     valGuarantee.textContent = `${state.guaranteePrice} 元`;
 
-    setClawPower.value = Math.round(physics.settings.clawPower * 100);
-    valClawPower.textContent = `${setClawPower.value}%`;
+    setClawPower.value = physics.settings.grabVoltage;
+    valClawPower.textContent = voltageLabel(setClawPower.value);
 
-    setDropPower.value = Math.round(physics.settings.dropPower * 100);
-    valDropPower.textContent = `${setDropPower.value}%`;
+    setDropPower.value = physics.settings.carryVoltage;
+    valDropPower.textContent = voltageLabel(setDropPower.value);
 
     setBaffleHeight.value = physics.settings.baffleHeight;
     valBaffleHeight.textContent = `${setBaffleHeight.value} px`;
@@ -721,10 +737,10 @@ document.addEventListener('DOMContentLoaded', () => {
     valGuarantee.textContent = `${e.target.value} 元`;
   });
   setClawPower.addEventListener('input', (e) => {
-    valClawPower.textContent = `${e.target.value}%`;
+    valClawPower.textContent = voltageLabel(e.target.value);
   });
   setDropPower.addEventListener('input', (e) => {
-    valDropPower.textContent = `${e.target.value}%`;
+    valDropPower.textContent = voltageLabel(e.target.value);
   });
   setBaffleHeight.addEventListener('input', (e) => {
     valBaffleHeight.textContent = `${e.target.value} px`;
@@ -735,8 +751,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnSaveOwner.addEventListener('click', () => {
     state.guaranteePrice = parseInt(setGuarantee.value, 10);
-    physics.settings.clawPower = parseInt(setClawPower.value, 10) / 100;
-    physics.settings.dropPower = parseInt(setDropPower.value, 10) / 100;
+    physics.settings.grabVoltage = parseInt(setClawPower.value, 10);
+    physics.settings.carryVoltage = parseInt(setDropPower.value, 10);
     physics.settings.baffleHeight = parseInt(setBaffleHeight.value, 10);
     physics.chute.baffleHeight = physics.settings.baffleHeight;
     state.timerSeconds = parseInt(setTimerSec.value, 10);

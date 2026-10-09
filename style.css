@@ -733,6 +733,17 @@ body {
 
 .guarantee-text { font-size: 0.68rem; font-weight: 900; color: var(--ink); }
 
+.voltage-chip {
+  background: linear-gradient(180deg, #fff6c2, #ffd23f);
+  color: #6b4400;
+  font-size: 0.68rem;
+  font-weight: 900;
+  padding: 2px 10px;
+  border-radius: 99px;
+  box-shadow: 0 3px 0 #b57c00;
+  white-space: nowrap;
+}
+
 .action-status-text {
   font-size: 0.72rem;
   color: #fff;

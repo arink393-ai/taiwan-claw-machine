@@ -70,8 +70,9 @@ class ClawPhysics {
 
     // 機台設定值 (台主模式)
     this.settings = {
-      clawPower: 0.75,
-      dropPower: 0.35,
+      // 爪力以「電壓」表示，和真機台一樣：電壓越高爪力越強
+      grabVoltage: 26,   // 抓取電壓：爪子合起來夾住的力道
+      carryVoltage: 16,  // 搬運電壓：上升與移動途中維持的力道（太低會中途掉）
       baffleHeight: 45,
       isGuaranteed: false
     };
@@ -175,13 +176,38 @@ class ClawPhysics {
       }
     }
 
-    // 單擺模型
-    const g = 650;
-    const effLen = Math.max(50, this.claw.cableLength);
-    this.claw.angleVel += (-g / effLen) * Math.sin(this.claw.angle) * dt;
-    this.claw.angleVel *= this.claw.dampening;
-    this.claw.angle += this.claw.angleVel * dt;
-    this.claw.angle = Math.max(-0.95, Math.min(0.95, this.claw.angle));
+    const c = this.claw;
+    const effLen = Math.max(50, c.cableLength);
+
+    if (state === 'DESCENDING') {
+      // 甩爪下爪：按下的瞬間，爪子帶著當下的擺動速度「拋」出去，
+      // 沿著甩動方向一邊下墜一邊飄移，路徑呈拋物線；不會被單擺拉回來
+      if (!c.throwing) {
+        c.throwing = true;
+        c.offset = Math.sin(c.angle) * c.cableLength;
+        c.offVel = c.angleVel * c.cableLength * Math.cos(c.angle) * 1.35;
+      }
+      c.offVel *= Math.max(0, 1 - 0.75 * dt);
+      c.offset += c.offVel * dt;
+
+      const lim = Math.min(170, effLen * 0.9);
+      const minOff = this.bounds.minX - this.gantry.x;
+      const maxOff = this.bounds.maxX - this.gantry.x;
+      const lo = Math.max(-lim, minOff), hi = Math.min(lim, maxOff);
+      if (c.offset < lo) { c.offset = lo; c.offVel = 0; }
+      if (c.offset > hi) { c.offset = hi; c.offVel = 0; }
+
+      c.angle = Math.asin(Math.max(-0.95, Math.min(0.95, c.offset / effLen)));
+      c.angleVel = c.offVel / effLen; // 抓取後繼續帶著這個速度擺盪
+    } else {
+      c.throwing = false;
+      // 單擺模型
+      const g = 650;
+      c.angleVel += (-g / effLen) * Math.sin(c.angle) * dt;
+      c.angleVel *= c.dampening;
+      c.angle += c.angleVel * dt;
+      c.angle = Math.max(-0.95, Math.min(0.95, c.angle));
+    }
 
     this.claw.x = this.gantry.x + Math.sin(this.claw.angle) * this.claw.cableLength;
     this.claw.y = this.gantry.y + Math.cos(this.claw.angle) * this.claw.cableLength;
@@ -310,6 +336,37 @@ class ClawPhysics {
     }
   }
 
+  // 電壓 → 0~1 的爪力比例 (8V ~ 32V)
+  static voltagePower(v) {
+    return Math.max(0, Math.min(1, (v - 8) / 24));
+  }
+
+  // 保夾時電壓鎖在最大
+  get grabPower() {
+    return this.settings.isGuaranteed ? 1 : ClawPhysics.voltagePower(this.settings.grabVoltage);
+  }
+
+  get carryPower() {
+    return this.settings.isGuaranteed ? 1 : ClawPhysics.voltagePower(this.settings.carryVoltage);
+  }
+
+  get effectiveGrabVoltage() {
+    return this.settings.isGuaranteed ? 32 : this.settings.grabVoltage;
+  }
+
+  get effectiveCarryVoltage() {
+    return this.settings.isGuaranteed ? 32 : this.settings.carryVoltage;
+  }
+
+  // 爪子合起來的程度：電壓越高閉得越緊
+  gripOpenRatio() {
+    return 0.34 - 0.22 * this.grabPower;
+  }
+
+  carryOpenRatio() {
+    return 0.34 - 0.22 * this.carryPower;
+  }
+
   // 爪尖夾取點：爪子中心往下約 22px，視覺上就是三個爪尖圍起來的位置
   grabPoint() {
     return { x: this.claw.x, y: this.claw.y + 22 };
@@ -338,8 +395,7 @@ class ClawPhysics {
     }
 
     if (closestDoll) {
-      const basePower = this.settings.isGuaranteed ? 1.0 : this.settings.clawPower;
-      const successChance = Math.max(0.2, (basePower * 1.2) - (closestDoll.type.catchDifficulty * 0.35));
+      const successChance = Math.max(0.2, (this.grabPower * 1.2) - (closestDoll.type.catchDifficulty * 0.35));
 
       if (Math.random() <= successChance || this.settings.isGuaranteed) {
         this.claw.holdingPrize = closestDoll;
@@ -356,7 +412,9 @@ class ClawPhysics {
     if (this.claw.dropAttemptDone) return;
     this.claw.dropAttemptDone = true;
 
-    const dropChance = 1.0 - (this.settings.dropPower * 1.1);
+    // 搬運電壓不夠，越重的獎品越容易中途鬆脫
+    const heavy = (this.claw.holdingPrize.type.weight - 1) * 0.3;
+    const dropChance = Math.max(0, Math.min(0.98, 1.0 - (this.carryPower * 1.1) + heavy));
     if (Math.random() < dropChance) {
       const dropped = this.claw.holdingPrize;
       dropped.isGrasped = false;

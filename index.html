@@ -166,6 +166,7 @@
                 <div class="guarantee-bulb" id="guarantee-bulb"></div>
                 <span class="guarantee-text">保夾狀態中</span>
               </div>
+              <div class="voltage-chip" title="抓取電壓 / 搬運電壓 (台主可調整)">⚡ <span id="disp-voltage">26V / 16V</span></div>
               <div class="action-status-text" id="action-status-text">
                 請先投入 10 元硬幣
               </div>
@@ -265,21 +266,21 @@
           </div>
 
           <div class="form-group">
-            <label for="set-claw-power">一段爪力 (夾起力量):</label>
+            <label for="set-claw-power">抓取電壓 (V)：爪子夾住的力道</label>
             <div class="range-wrap">
-              <input type="range" id="set-claw-power" min="20" max="100" step="5" value="75">
-              <span id="val-claw-power" class="val-display">75%</span>
+              <input type="range" id="set-claw-power" min="8" max="32" step="1" value="26">
+              <span id="val-claw-power" class="val-display">26 V</span>
             </div>
-            <small>影響爪子閉合捏緊玩偶時的最大咬合力。</small>
+            <small>跟真機台一樣，電壓越高爪子閉得越緊、越容易夾起；太低會夾了又滑開。</small>
           </div>
 
           <div class="form-group">
-            <label for="set-drop-power">二段爪力 (頂部放爪/內丟鬆爪):</label>
+            <label for="set-drop-power">搬運電壓 (V)：上升與移動途中的力道</label>
             <div class="range-wrap">
-              <input type="range" id="set-drop-power" min="10" max="90" step="5" value="35">
-              <span id="val-drop-power" class="val-display">35% (偏弱)</span>
+              <input type="range" id="set-drop-power" min="8" max="32" step="1" value="16">
+              <span id="val-drop-power" class="val-display">16 V</span>
             </div>
-            <small>爪子升至頂點或折返時減弱之爪力（標準台通常會在此時鬆開造成內丟）。</small>
+            <small>夾起後維持的力道。電壓低時爪子會鬆鬆的，重的獎品（公仔盒、西瓜）容易中途掉落；保夾時兩段都鎖在 32V。</small>
           </div>
 
           <div class="form-group">
@@ -324,7 +325,7 @@
         <div class="help-section">
           <h4>🎯 核心四大神技</h4>
           <ul>
-            <li><b>1. 甩爪 (Swinging Claw)</b>：利用方向鍵或搖桿快速左右或前後搖晃，爪子會因慣性畫出拋物線擺盪，在爪子盪向洞口最高點時按下下爪，可將娃娃往洞口扯！</li>
+            <li><b>1. 甩爪 (Swinging Claw)</b>：利用方向鍵或搖桿快速左右或前後搖晃，爪子會因慣性畫出拋物線擺盪，在爪子盪向洞口最高點時按下下爪——爪子會帶著當下的擺動速度，沿著甩動方向拋出一道弧線落下，把娃娃往洞口扯！</li>
             <li><b>2. 二停技巧 (Double Tap Stop)</b>：按下下爪後，爪子向下墜落的過程中，<b>再次按下「下爪按鈕」</b>，爪子會立刻剎車停止下潛並提早閉合收爪！適合精準夾取娃娃的突起處（如耳朵、標籤、吸管），避免爪子戳到底翻倒娃娃。</li>
             <li><b>3. 倒卡洞口 / 翻落法</b>：如果娃娃已經被堆在洞口擋板邊緣，夾住娃娃外側，上升時娃娃被拉扯翻滾即有機率彈過擋板掉入洞口！</li>
             <li><b>4. 保夾保證取物</b>：當投入金額達到保證取物金額時，綠色保夾指示燈會大亮，此時爪力鎖定為最強 100% 絕對不放爪，直到成功夾出獎品為止！</li>
