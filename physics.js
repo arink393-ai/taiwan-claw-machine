@@ -53,6 +53,10 @@ class ClawPhysics {
     // 洞口的兩支鐵桿：把洞口縮小，太大隻的娃娃要擠過去 (gap = 兩桿之間的淨空 px)
     this.rods = { gap: 66, r: 8 };
 
+    // 台主手法：本拍的電壓加減值 (強拍 +、弱拍 -)，由 game.js 每局開始時設定
+    this.beatMod = { grab: 0, carry: 0 };
+    this.tricks = { jam: true }; // 卡洞預擺
+
     // 鋼索與爪子
     this.claw = {
       x: this.gantry.x,
@@ -147,6 +151,33 @@ class ClawPhysics {
         }
       }
     }
+
+    // 台主手法「卡洞預擺」：把特大隻的獎品先卡在洞口鐵桿上，看起來一碰就掉，其實根本擠不過去
+    // (只能靠「卡洞自取」付費買走)
+    if (this.tricks.jam) {
+      const jamId = Math.random() < 0.5 ? 'watermelon' : 'fb_hero';
+      const type = PRIZE_TYPES.find(t => t.id === jamId);
+      const doll = this.createDoll(type, this.chute.x + this.chute.width / 2, 250, 0.95, 1.5);
+      doll.jam = true;
+      doll.rotation = 0;
+      this.dolls.push(doll);
+    }
+  }
+
+  // 卡洞中的娃娃：停在鐵桿上超過 3 秒就算卡洞，可以付費自取
+  stuckDoll() {
+    let best = null;
+    for (const d of this.dolls) {
+      if (d.stuckTime > 3 && (!best || d.stuckTime > best.stuckTime)) best = d;
+    }
+    return best;
+  }
+
+  takeStuck() {
+    const doll = this.stuckDoll();
+    if (!doll) return false;
+    this.triggerWin(doll, this.dolls.indexOf(doll));
+    return true;
   }
 
   // 同一款獎品有大小之分：迷你 / 標準 / 大型 / 特大
@@ -308,7 +339,7 @@ class ClawPhysics {
 
       // 落定期間在擋板外留一段緩衝帶，山堆才不會一鬆手就整片滑進洞口
       const front = this.inFrontLane(doll);
-      if (front && this.settleTimer > 0 && doll.x - doll.radius < baffleX + 45) {
+      if (front && !doll.jam && this.settleTimer > 0 && doll.x - doll.radius < baffleX + 45) {
         doll.x = baffleX + 45 + doll.radius;
         doll.vx = Math.abs(doll.vx) * 0.4;
       }
@@ -341,6 +372,14 @@ class ClawPhysics {
           }
           doll.rotVel += nx * 0.4;
         }
+      }
+
+      // 卡洞偵測：停在鐵桿上方不動
+      const restY = this.rodPositions()[0].y - 4;
+      if (front && !doll.isGrasped && doll.x > this.chute.x && doll.x < baffleX && doll.y < restY && Math.abs(doll.vy) < 10) {
+        doll.stuckTime = (doll.stuckTime || 0) + dt;
+      } else {
+        doll.stuckTime = 0;
       }
 
       // 洞口判定
@@ -414,14 +453,18 @@ class ClawPhysics {
   }
 
   // 保夾時電壓鎖在最大
+  // 實際電壓 = 台主設定 + 本拍加減值 (保夾時鎖最大)
   get grabPower() {
-    return this.settings.isGuaranteed ? 1 : ClawPhysics.voltagePower(this.settings.grabVoltage);
+    if (this.settings.isGuaranteed) return 1;
+    return ClawPhysics.voltagePower(this.settings.grabVoltage + this.beatMod.grab);
   }
 
   get carryPower() {
-    return this.settings.isGuaranteed ? 1 : ClawPhysics.voltagePower(this.settings.carryVoltage);
+    if (this.settings.isGuaranteed) return 1;
+    return ClawPhysics.voltagePower(this.settings.carryVoltage + this.beatMod.carry);
   }
 
+  // 面板上顯示的是台主設定值，不會洩漏這一拍是強是弱
   get effectiveGrabVoltage() {
     return this.settings.isGuaranteed ? 32 : this.settings.grabVoltage;
   }
@@ -502,8 +545,8 @@ class ClawPhysics {
 
   // 二段放爪檢測
   checkDropPowerRelease() {
-    if (this.settings.isGuaranteed || !this.claw.holdingPrize) return;
-    if (this.claw.dropAttemptDone) return;
+    if (this.settings.isGuaranteed || !this.claw.holdingPrize) return false;
+    if (this.claw.dropAttemptDone) return false;
     this.claw.dropAttemptDone = true;
 
     // 搬運電壓不夠，越重的獎品越容易中途鬆脫
@@ -519,7 +562,9 @@ class ClawPhysics {
       dropped.vx = (Math.random() - 0.5) * 80;
       this.claw.holdingPrize = null;
       if (window.clawAudio) window.clawAudio.playClawSnap();
+      return true;
     }
+    return false;
   }
 
   // ------------------------------------------------------------------

@@ -1376,3 +1376,29 @@ body {
   .kraft-bag { width: 40px; height: 62px; }
   .brand-chinese { font-size: 1.35rem; }
 }
+
+/* 台主黑科技 / 卡洞自取 / 登記板拍數 */
+.clip-beats { font-size: 0.5rem; font-weight: 800; color: #7a1d12; margin-top: 3px; padding: 0 3px; line-height: 1.2; word-break: break-all; }
+
+.take-stuck {
+  position: absolute;
+  left: 12px;
+  bottom: 38px;
+  z-index: 12;
+  background: linear-gradient(180deg, #ffe27a, #ffb52e);
+  color: #5a3300;
+  border: 2px solid #fff;
+  border-radius: 99px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #c47f00, 0 6px 10px rgba(0, 0, 0, 0.3);
+  animation: btn-pulse 1.1s ease-in-out infinite;
+}
+.take-stuck:disabled { opacity: 0.55; cursor: not-allowed; animation: none; }
+
+.tricks-group { background: #fff4d6; border: 2px dashed #e0a400; border-radius: 14px; padding: 10px 12px; }
+.check-row { display: flex !important; align-items: center; gap: 8px; font-size: 0.8rem !important; font-weight: 700 !important; }
+.check-row input { accent-color: var(--pink); width: 16px; height: 16px; }

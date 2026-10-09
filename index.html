@@ -47,6 +47,7 @@
           <div class="clip-top"></div>
           <div class="clip-title">夾出一個<br>登記一次</div>
           <div class="clip-tally" id="clip-tally">—</div>
+          <div class="clip-beats" id="clip-beats">出貨拍 —</div>
         </div>
         <button class="topper-shelf" id="topper-shelf" title="夾換區：用兌換券換限定品">
           <div class="shelf-items" id="shelf-items"></div>
@@ -114,6 +115,8 @@
           <div class="chute-marker-label">
             <span>⬇ 出貨洞口 ⬇</span>
           </div>
+
+          <button id="btn-take-stuck" class="take-stuck hidden">🔧 卡洞自取 · 2 局</button>
 
           <!-- 成功出貨時的特效層 (Confetti & Win Toast) -->
           <div id="win-overlay" class="win-overlay hidden">
@@ -244,6 +247,7 @@
       <div class="stat-item">總投幣: <b id="stat-total-coins">0</b> 元</div>
       <div class="stat-item">已夾出: <b id="stat-prizes-won">0</b> 隻</div>
       <div class="stat-item">勝率: <b id="stat-win-rate">0.0%</b></div>
+      <div class="stat-item">拍數: <b id="stat-beat">0</b></div>
       <div class="stat-item quick-keys">快捷鍵: <b>[WASD] 移動</b> <b>[空白鍵] 下爪/二停</b> <b>[C] 投幣</b> <b>[R] 快速補貨</b></div>
     </footer>
   </div>
@@ -363,6 +367,18 @@
             </div>
           </div>
 
+          <div class="form-group tricks-group">
+            <label>🕵️ 台主黑科技</label>
+            <label class="check-row"><input type="checkbox" id="opt-beat" checked> 拍數強爪：只有特定拍數才有強爪，其餘拍偏弱</label>
+            <div class="range-wrap">
+              <input type="range" id="set-beat-period" min="3" max="15" step="1" value="7">
+              <span id="val-beat-period" class="val-display">每 7 拍</span>
+            </div>
+            <label class="check-row"><input type="checkbox" id="opt-cool" checked> 出貨後收水：剛出貨的 3 拍爪力特別弱</label>
+            <label class="check-row"><input type="checkbox" id="opt-jam" checked> 卡洞預擺：補貨時把特大獎品卡在洞口鐵桿上，要付費「卡洞自取」</label>
+            <small>強拍時抓取 +6V、搬運 +8V；一般拍各 −4V；收水期各 −8V。保夾時不受影響。登記板會記錄最近出貨的拍數，玩家可以用來算拍數。</small>
+          </div>
+
           <div class="form-actions">
             <button id="btn-refill-dolls" class="btn-primary">🧸 重新補滿娃娃 (山崩台鋪滿)</button>
             <button id="btn-clear-dolls" class="btn-secondary">🧹 清空重排</button>
@@ -401,6 +417,28 @@
         <div class="help-section">
           <h4>📏 大小不一與洞口鐵桿</h4>
           <p>同一種獎品有 <b>迷你 / 標準 / 大型 / 特大</b> 四種尺寸，越大隻越難夾牢。洞口有<b>兩支鐵桿</b>把出口縮小，太大隻的要擠過去，卡在桿子上時可以把它夾起來換個角度再放，或請台主把鐵桿間距調寬。</p>
+        </div>
+        <div class="help-section">
+          <h4>🕵️ 台主常見手法</h4>
+          <ul>
+            <li><b>拍數強爪</b>：台主會設定「每 N 拍才有一拍強爪」，其他拍都在放水——電壓偏低，夾起來也容易中途鬆掉。</li>
+            <li><b>出貨後收水</b>：剛出貨的下 3 拍爪力特別弱，這時連投多半是白花錢。</li>
+            <li><b>卡洞預擺</b>：特大獎品卡在洞口鐵桿上，看起來一碰就掉，其實擠不過去；要用「卡洞自取」付 2 局買走。</li>
+            <li><b>縮口與擋板</b>：鐵桿間距、擋板高度都能調，越大隻的獎品越難進洞。</li>
+            <li><b>保夾不是白送</b>：保夾金額一出貨就歸零；而且要累積到看板上的金額才啟動。</li>
+          </ul>
+        </div>
+        <div class="help-section">
+          <h4>🔢 算拍數 &amp; 實戰技巧</h4>
+          <ul>
+            <li><b>算拍數</b>：右下「拍數」是機台累計玩了幾拍，機頂登記板寫著最近出貨的拍數（例如 7·14·21）。看出貨間隔就知道台主設的週期，下一個強拍＝最近一次強拍＋週期。</li>
+            <li><b>看爪定強弱</b>：強拍時爪子閉合得特別緊（爪尖明顯收攏），弱拍時爪子鬆鬆的。先觀察別人這一拍的爪形，再決定要不要投。</li>
+            <li><b>弱拍別硬夾</b>：弱拍就拿來「推」——甩爪撥動獎品、把它推向洞口，留給強拍一次夾走。</li>
+            <li><b>強拍重點</b>：強拍才用二停夾高瘦盒的上緣、夾最重的獎品；強拍之後（剛出貨）不要連投。</li>
+            <li><b>甩爪方向</b>：爪子往哪邊盪，下爪就往哪邊飄；沒甩直上直下容易夾了就鬆。</li>
+            <li><b>先挑小隻</b>：迷你、標準尺寸好進洞；特大隻最好放著，先把它前面的東西清掉。</li>
+            <li><b>預算</b>：算好保夾金額，快到保夾前別換機台，累積才不會白費。</li>
+          </ul>
         </div>
         <div class="help-section">
           <h4>🧹 清檯獎</h4>

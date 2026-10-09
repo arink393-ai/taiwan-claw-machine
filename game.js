@@ -23,6 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
     isMotorSoundPlaying: false,
     winOpen: false,        // 出貨卡片開啟時暫停倒數與操作
     releaseScheduled: false,
+    beat: 0,              // 拍數：機台已經玩了幾拍 (每局一拍)
+    lastWinBeat: 0,
+    winBeats: [],         // 最近幾次出貨是第幾拍 (登記板上看得到，用來算拍數)
     tickets: 0,           // 兌換券：每夾出一個獎品就有，可換夾換品或刮刮樂
     clearBonus: false,    // 剛清檯：關掉出貨卡片後要顯示清檯獎
     pendingSize: '標準',
@@ -40,6 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
       state.totalCoinsInserted = raw.totalCoinsInserted || 0;
       state.prizesWonCount = raw.prizesWonCount || 0;
       state.tickets = raw.tickets || 0;
+      state.beat = raw.beat || 0;
+      state.lastWinBeat = raw.lastWinBeat || 0;
+      state.winBeats = raw.winBeats || [];
     } catch (e) { /* 無痕模式或資料損毀就當作新遊戲 */ }
   }
 
@@ -49,7 +55,10 @@ document.addEventListener('DOMContentLoaded', () => {
         collection: state.collection,
         totalCoinsInserted: state.totalCoinsInserted,
         prizesWonCount: state.prizesWonCount,
-        tickets: state.tickets
+        tickets: state.tickets,
+        beat: state.beat,
+        lastWinBeat: state.lastWinBeat,
+        winBeats: state.winBeats
       }));
     } catch (e) { /* 儲存失敗不影響遊戲 */ }
   }
@@ -81,6 +90,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const elGuaranteePill = document.getElementById('marquee-guarantee-pill');
 
   // 統計列
+  const elStatBeat = document.getElementById('stat-beat');
+  const elClipBeats = document.getElementById('clip-beats');
   const elTicketCount = document.getElementById('ticket-count');
   const elClipTally = document.getElementById('clip-tally');
   const elStatCoins = document.getElementById('stat-total-coins');
@@ -158,6 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 兌換券與夾出登記板
     elTicketCount.textContent = state.tickets;
+    elStatBeat.textContent = state.beat;
+    elClipBeats.textContent = state.winBeats.length ? '出貨拍 ' + state.winBeats.join('·') : '出貨拍 —';
     elClipTally.textContent = tallyString(state.prizesWonCount);
 
     // 背包徽章
@@ -186,6 +199,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // -------------------------------------------------------------
+  // 台主手法：拍數強爪週期 + 出貨後收水
+  //   強拍：抓取電壓 +6V、搬運電壓 +8V，夾得特別緊
+  //   一般拍(放水拍)：各 -4V
+  //   收水期：剛出貨後的 3 拍各 -8V
+  //   (保夾時全部鎖最大電壓，不受影響)
+  // -------------------------------------------------------------
+  const tricks = { beatOn: true, period: 7, coolDown: true };
+
+  function computeBeatMod() {
+    if (!tricks.beatOn) return { grab: 0, carry: 0 };
+    if (state.beat % tricks.period === 0) return { grab: 6, carry: 8 };
+    const since = state.beat - state.lastWinBeat;
+    if (tricks.coolDown && state.lastWinBeat > 0 && since >= 1 && since <= 3) return { grab: -8, carry: -8 };
+    return { grab: -4, carry: -4 };
+  }
+
   // 開始新一局
   function startNextRound() {
     if (state.credits <= 0) {
@@ -199,6 +229,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     state.credits--;
+    state.beat++;
+    physics.beatMod = computeBeatMod();
+    saveGame();
     state.mode = 'PLAYING';
     state.currentTimer = state.timerSeconds;
     state.isSecondStopAvailable = false;
@@ -284,6 +317,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!prizeType.blind) {
       state.collection[prizeType.id] = (state.collection[prizeType.id] || 0) + 1;
     }
+    state.lastWinBeat = state.beat;
+    state.winBeats = [...state.winBeats, state.beat].slice(-6);
     const gain = TICKET_BY_RARITY[prizeType.rarity] || 1;
     state.tickets += gain;
     state.pendingGain = gain;
@@ -408,6 +443,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // 卡洞自取：特大獎品卡在鐵桿上，付 2 局 (20 元) 買走
+  const btnTakeStuck = document.getElementById('btn-take-stuck');
+  const TAKE_COST = 2;
+  btnTakeStuck.addEventListener('click', () => {
+    if (state.credits < TAKE_COST || state.winOpen) return;
+    state.credits -= TAKE_COST;
+    state.totalCoinsInserted += TAKE_COST * 10;
+    if (physics.takeStuck()) window.clawAudio.playCoin();
+    updateDisplays();
+  });
+
   // 主更新循環 (RequestAnimationFrame)
   let lastTime = performance.now();
 
@@ -463,7 +509,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 檢查二段放爪/內丟 (當升至一半以上時)
       if (physics.claw.cableLength < physics.claw.maxCableLength * 0.6) {
-        physics.checkDropPowerRelease();
+        if (physics.checkDropPowerRelease()) {
+          // 抖爪：電壓不穩，爪子突然鬆開
+          elActionText.textContent = '⚡ 爪子抖了一下，鬆掉了！';
+          physics.claw.openRatio = 0.9;
+        }
       }
 
       // 上升至頂點 (恢復短鋼索)
@@ -522,6 +572,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 800);
       }
     }
+
+    // 卡洞自取按鈕
+    const stuck = physics.stuckDoll();
+    btnTakeStuck.classList.toggle('hidden', !stuck || state.winOpen);
+    if (stuck) btnTakeStuck.disabled = state.credits < TAKE_COST;
 
     // 3. 物理更新與天車馬達音效
     const isMoving = physics.update(dt, input, state.mode);
@@ -770,6 +825,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const valDropPower = document.getElementById('val-drop-power');
   const setBaffleHeight = document.getElementById('set-baffle-height');
   const valBaffleHeight = document.getElementById('val-baffle-height');
+  const optBeat = document.getElementById('opt-beat');
+  const setBeatPeriod = document.getElementById('set-beat-period');
+  const valBeatPeriod = document.getElementById('val-beat-period');
+  const optCool = document.getElementById('opt-cool');
+  const optJam = document.getElementById('opt-jam');
   const setRodGap = document.getElementById('set-rod-gap');
   const valRodGap = document.getElementById('val-rod-gap');
   const setTimerSec = document.getElementById('set-timer-sec');
@@ -800,6 +860,12 @@ document.addEventListener('DOMContentLoaded', () => {
     setBaffleHeight.value = physics.settings.baffleHeight;
     valBaffleHeight.textContent = `${setBaffleHeight.value} px`;
 
+    optBeat.checked = tricks.beatOn;
+    setBeatPeriod.value = tricks.period;
+    valBeatPeriod.textContent = `每 ${tricks.period} 拍`;
+    optCool.checked = tricks.coolDown;
+    optJam.checked = physics.tricks.jam;
+
     setRodGap.value = physics.rods.gap;
     valRodGap.textContent = `${setRodGap.value} mm`;
 
@@ -822,6 +888,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setBaffleHeight.addEventListener('input', (e) => {
     valBaffleHeight.textContent = `${e.target.value} px`;
   });
+  setBeatPeriod.addEventListener('input', (e) => {
+    valBeatPeriod.textContent = `每 ${e.target.value} 拍`;
+  });
   setRodGap.addEventListener('input', (e) => {
     valRodGap.textContent = `${e.target.value} mm`;
   });
@@ -836,6 +905,10 @@ document.addEventListener('DOMContentLoaded', () => {
     physics.settings.baffleHeight = parseInt(setBaffleHeight.value, 10);
     physics.chute.baffleHeight = physics.settings.baffleHeight;
     physics.rods.gap = parseInt(setRodGap.value, 10);
+    tricks.beatOn = optBeat.checked;
+    tricks.period = parseInt(setBeatPeriod.value, 10);
+    tricks.coolDown = optCool.checked;
+    physics.tricks.jam = optJam.checked;
     state.timerSeconds = parseInt(setTimerSec.value, 10);
 
     updateDisplays();
