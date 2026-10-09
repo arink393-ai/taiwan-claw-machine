@@ -835,7 +835,7 @@
   function getBitmap(type) {
     if (bitmapCache[type.id]) return bitmapCache[type.id];
     const L = Math.ceil(type.radius * 3.6);
-    const S = 2;
+    const S = 3; // 遊戲內最大會放大到 1.45 倍，所以用 3x 解析度
     const canvas = document.createElement('canvas');
     canvas.width = L * S;
     canvas.height = L * S;

@@ -50,6 +50,9 @@ class ClawPhysics {
     // 爪子能碰到的景深範圍 (±)
     this.depthTolerance = 0.35;
 
+    // 洞口的兩支鐵桿：把洞口縮小，太大隻的娃娃要擠過去 (gap = 兩桿之間的淨空 px)
+    this.rods = { gap: 66, r: 8 };
+
     // 鋼索與爪子
     this.claw = {
       x: this.gantry.x,
@@ -98,6 +101,13 @@ class ClawPhysics {
     return Math.abs(doll.depth - this.gantry.depth) <= this.depthTolerance;
   }
 
+  rodPositions() {
+    const cx = this.chute.x + this.chute.width / 2;
+    const y = this.bounds.maxY - this.settings.baffleHeight + 8;
+    const off = this.rods.gap / 2 + this.rods.r;
+    return [{ x: cx - off, y, r: this.rods.r }, { x: cx + off, y, r: this.rods.r }];
+  }
+
   // ------------------------------------------------------------------
   // 補貨
   // ------------------------------------------------------------------
@@ -122,20 +132,34 @@ class ClawPhysics {
     for (const L of layers) {
       for (let x = Math.max(L.from, minX); x <= L.to; x += L.step) {
         const jx = L.jitter ? Math.random() * L.jitter - L.jitter / 2 : 0;
-        this.dolls.push(this.createDoll(pickPrizeType(), x + jx, L.y, 0.55 + Math.random() * 0.45));
+        this.dolls.push(this.createDoll(pickPrizeType(), x + jx, L.y, 0.55 + Math.random() * 0.45, this.rollScale()));
       }
     }
   }
 
-  createDoll(type, x, y, depth) {
+  // 同一款獎品有大小之分：迷你 / 標準 / 大型 / 特大
+  rollScale() {
+    const r = Math.random();
+    if (r < 0.3) return 0.78;
+    if (r < 0.65) return 1.0;
+    if (r < 0.92) return 1.25;
+    return 1.45;
+  }
+
+  static sizeLabel(scale) {
+    return scale < 0.9 ? '迷你' : scale < 1.1 ? '標準' : scale < 1.35 ? '大型' : '特大';
+  }
+
+  createDoll(type, x, y, depth, scale = 1) {
     return {
       type,
+      scale,
       x,
       y,
       depth: depth || 0.7,
       vx: (Math.random() - 0.5) * 5,
       vy: 0,
-      radius: type.radius,
+      radius: type.radius * scale,
       rotation: (Math.random() - 0.5) * 0.4,
       rotVel: 0,
       isGrasped: false,
@@ -248,7 +272,9 @@ class ClawPhysics {
       doll.vx *= 0.95;
       doll.rotVel *= 0.92;
 
-      if (doll.y + doll.radius > floorY) {
+      // 洞口上方沒有地板：大隻的娃娃(半徑>35)才碰得到洞底、不然永遠到不了出貨線
+      const overHole = doll.x > this.chute.x + 8 && doll.x < this.chute.x + this.chute.width;
+      if (!overHole && doll.y + doll.radius > floorY) {
         doll.y = floorY - doll.radius;
         doll.vy = -doll.vy * 0.25;
         if (Math.abs(doll.vy) < 15) doll.vy = 0;
@@ -278,6 +304,24 @@ class ClawPhysics {
             doll.x = baffleX - doll.radius;
             doll.vx = -Math.abs(doll.vx) * 0.4;
           }
+        }
+      }
+
+      // 洞口鐵桿：娃娃是軟的，可以擠進比自己小一點的縫隙 (有效半徑 78%)
+      for (const rod of this.rodPositions()) {
+        const rx = doll.x - rod.x, ry = doll.y - rod.y;
+        const rd = Math.hypot(rx, ry);
+        const minD = doll.radius * 0.78 + rod.r;
+        if (rd < minD && rd > 0.001) {
+          const nx = rx / rd, ny = ry / rd;
+          doll.x = rod.x + nx * minD;
+          doll.y = rod.y + ny * minD;
+          const vn = doll.vx * nx + doll.vy * ny;
+          if (vn < 0) {
+            doll.vx -= 1.25 * vn * nx;
+            doll.vy -= 1.25 * vn * ny;
+          }
+          doll.rotVel += nx * 0.4;
         }
       }
 
@@ -336,7 +380,7 @@ class ClawPhysics {
     this.burst(this.chute.x + this.chute.width / 2, this.chute.y + 20, 46);
 
     if (this.onPrizeWon) {
-      this.onPrizeWon(doll.type);
+      this.onPrizeWon(doll.type, doll);
     }
   }
 
@@ -392,7 +436,7 @@ class ClawPhysics {
     for (const doll of this.dolls) {
       if (!this.isInReach(doll)) continue;
       const dist = Math.hypot(gp.x - doll.x, gp.y - doll.y);
-      if (dist < doll.type.catchRadius && dist < minDist) {
+      if (dist < doll.type.catchRadius * doll.scale && dist < minDist) {
         minDist = dist;
         closestDoll = doll;
       }
@@ -401,7 +445,9 @@ class ClawPhysics {
     if (closestDoll) {
       // 甩爪帶著動能，爪尖更容易卡進娃娃：甩得越大越好夾
       const swingBonus = this.claw.swing * 0.2;
-      const successChance = Math.max(0.2, (this.grabPower * 1.2) - (closestDoll.type.catchDifficulty * 0.35) + swingBonus);
+      // 越大隻越難夾牢
+      const sizePenalty = (closestDoll.scale - 1) * 0.25;
+      const successChance = Math.max(0.2, (this.grabPower * 1.2) - (closestDoll.type.catchDifficulty * 0.35) + swingBonus - sizePenalty);
 
       if (Math.random() <= successChance || this.settings.isGuaranteed) {
         this.claw.holdingPrize = closestDoll;
@@ -437,7 +483,8 @@ class ClawPhysics {
     this.claw.dropAttemptDone = true;
 
     // 搬運電壓不夠，越重的獎品越容易中途鬆脫
-    const heavy = (this.claw.holdingPrize.type.weight - 1) * 0.3;
+    const held = this.claw.holdingPrize;
+    const heavy = (held.type.weight * Math.pow(held.scale, 1.5) - 1) * 0.3;
     // 甩爪夾得比較牢，直上直下則比較容易掉
     const grip = 1 - this.claw.swing * 0.5;
     const dropChance = Math.max(0, Math.min(0.98, (1.0 - (this.carryPower * 1.1) + heavy) * grip));
@@ -521,10 +568,10 @@ class ClawPhysics {
     const A = window.PrizeArt;
 
     // 背牆
-    g.fillStyle = A.lg(g, 0, by0, 0, by1, ['#fff4fa', '#ffe3f1', '#e9dcff']);
+    g.fillStyle = A.lg(g, 0, by0, 0, by1, ['#ffffff', '#fff8dc', '#ffefb0']);
     g.fillRect(bx0, by0, bx1 - bx0, by1 - by0);
     // 波點
-    g.fillStyle = 'rgba(255,255,255,.7)';
+    g.fillStyle = 'rgba(255,200,60,.4)';
     for (let j = 0; j < 8; j++) {
       for (let i = 0; i < 12; i++) {
         const px = bx0 + 22 + i * 42 + (j % 2) * 21;
@@ -554,10 +601,10 @@ class ClawPhysics {
     }
 
     // 天花板
-    g.fillStyle = A.lg(g, 0, 0, 0, by0, ['#fff', '#ffd9ec']);
+    g.fillStyle = A.lg(g, 0, 0, 0, by0, ['#fff', '#ffe9a8']);
     g.beginPath(); g.moveTo(0, 0); g.lineTo(W, 0); g.lineTo(bx1, by0); g.lineTo(bx0, by0); g.closePath(); g.fill();
     // 側牆
-    g.fillStyle = A.lg(g, 0, 0, bx0, 0, ['#ff9cc6', '#ffc6de']);
+    g.fillStyle = A.lg(g, 0, 0, bx0, 0, ['#9fb4d4', '#e2ecf8']);
     g.beginPath(); g.moveTo(0, 0); g.lineTo(bx0, by0); g.lineTo(bx0, by1); g.lineTo(0, H); g.closePath(); g.fill();
     g.fillStyle = A.lg(g, W, 0, bx1, 0, ['#ff9cc6', '#ffc6de']);
     g.beginPath(); g.moveTo(W, 0); g.lineTo(bx1, by0); g.lineTo(bx1, by1); g.lineTo(W, H); g.closePath(); g.fill();
@@ -571,14 +618,14 @@ class ClawPhysics {
       for (let i = 0; i < NC; i++) {
         const lx = (t) => (bx0 + (bx1 - bx0) * (i / NC)) * (1 - t) + (W * (i / NC)) * t;
         const rx = (t) => (bx0 + (bx1 - bx0) * ((i + 1) / NC)) * (1 - t) + (W * ((i + 1) / NC)) * t;
-        g.fillStyle = (r + i) % 2 ? '#fff0f6' : '#ffc9de';
+        g.fillStyle = (r + i) % 2 ? '#62d686' : '#46bd6c';
         g.beginPath();
         g.moveTo(lx(t0), y0); g.lineTo(rx(t0), y0); g.lineTo(rx(t1), y1); g.lineTo(lx(t1), y1);
         g.closePath(); g.fill();
       }
     }
     // 地板遠端淡霧
-    g.fillStyle = A.lg(g, 0, by1, 0, H, ['rgba(200,160,230,.5)', 'rgba(200,160,230,0)']);
+    g.fillStyle = A.lg(g, 0, by1, 0, H, ['rgba(10,70,40,.4)', 'rgba(10,70,40,0)']);
     g.fillRect(0, by1, W, floorH);
 
     // 房間稜線
@@ -593,8 +640,8 @@ class ClawPhysics {
 
     // 暈影
     const vg = g.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.85);
-    vg.addColorStop(0, 'rgba(120,60,150,0)');
-    vg.addColorStop(1, 'rgba(120,60,150,.28)');
+    vg.addColorStop(0, 'rgba(120,80,0,0)');
+    vg.addColorStop(1, 'rgba(120,80,0,.25)');
     g.fillStyle = vg; g.fillRect(0, 0, W, H);
 
     return c;
@@ -633,13 +680,13 @@ class ClawPhysics {
 
     // 洞內深度
     A.rr(ctx, c.x, c.y, c.width, c.height, 14);
-    ctx.fillStyle = A.lg(ctx, 0, c.y, 0, c.y + c.height, ['#3b1d54', '#150a24']);
+    ctx.fillStyle = A.lg(ctx, 0, c.y, 0, c.y + c.height, ['#2e2e2e', '#0a0a0a']);
     ctx.fill();
     ctx.save();
     A.rr(ctx, c.x, c.y, c.width, c.height, 14); ctx.clip();
     const inner = ctx.createRadialGradient(c.x + c.width / 2, c.y + c.height * 0.2, 4, c.x + c.width / 2, c.y + c.height * 0.5, c.width * 0.7);
-    inner.addColorStop(0, 'rgba(255,160,220,.35)');
-    inner.addColorStop(1, 'rgba(255,160,220,0)');
+    inner.addColorStop(0, 'rgba(255,210,80,.3)');
+    inner.addColorStop(1, 'rgba(255,210,80,0)');
     ctx.fillStyle = inner; ctx.fillRect(c.x, c.y, c.width, c.height);
     // 警示條紋
     for (let i = c.x - 20; i < c.x + c.width + 20; i += 16) {
@@ -649,10 +696,10 @@ class ClawPhysics {
     ctx.restore();
 
     // 霓虹包邊
-    ctx.shadowColor = '#ff6fb5';
+    ctx.shadowColor = '#ff3b30';
     ctx.shadowBlur = 8 + pulse * 10;
     A.rr(ctx, c.x, c.y, c.width, c.height, 14);
-    ctx.strokeStyle = '#ff6fb5'; ctx.lineWidth = 4; ctx.stroke();
+    ctx.strokeStyle = '#ff3b30'; ctx.lineWidth = 4; ctx.stroke();
     ctx.shadowBlur = 0;
     A.rr(ctx, c.x + 3, c.y + 3, c.width - 6, c.height - 6, 11);
     ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1.2; ctx.stroke();
@@ -680,8 +727,21 @@ class ClawPhysics {
 
     ctx.font = '700 9px "Noto Sans TC", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#d6479a';
+    ctx.fillStyle = '#b35a00';
     ctx.fillText(`${bh}mm`, baffleX, baffleTopY - 7);
+
+    // 兩支鐵桿 (縮小洞口)
+    for (const rod of this.rodPositions()) {
+      ctx.fillStyle = 'rgba(0,0,0,.35)';
+      ctx.beginPath(); ctx.arc(rod.x + 1.5, rod.y + 2, rod.r + 1, 0, Math.PI * 2); ctx.fill();
+      const rg = ctx.createRadialGradient(rod.x - rod.r * 0.4, rod.y - rod.r * 0.4, 1, rod.x, rod.y, rod.r * 1.1);
+      rg.addColorStop(0, '#ffffff'); rg.addColorStop(0.45, '#cfd6e0'); rg.addColorStop(1, '#6b7486');
+      ctx.fillStyle = rg;
+      ctx.beginPath(); ctx.arc(rod.x, rod.y, rod.r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#4a5160'; ctx.lineWidth = 1; ctx.stroke();
+    }
+    ctx.fillStyle = '#7a5200';
+    ctx.fillText(`縮口 ${this.rods.gap}mm`, c.x + c.width / 2, this.rodPositions()[0].y + 22);
   }
 
   // 地面接觸陰影 (讓娃娃看起來真的站在地板上)
@@ -724,7 +784,7 @@ class ClawPhysics {
     ctx.rotate(doll.rotation);
     ctx.scale(s, s);
     if (!doll.isGrasped && !this.isInReach(doll)) ctx.globalAlpha = 0.72;
-    ctx.drawImage(bm.canvas, -bm.L / 2, -bm.L / 2, bm.L, bm.L);
+    ctx.drawImage(bm.canvas, -bm.L * doll.scale / 2, -bm.L * doll.scale / 2, bm.L * doll.scale, bm.L * doll.scale);
     ctx.restore();
   }
 
@@ -746,9 +806,9 @@ class ClawPhysics {
     ctx.scale(s, s);
     // 車體
     A.rr(ctx, -28, -24, 56, 26, 8);
-    ctx.fillStyle = A.lg(ctx, 0, -24, 0, 2, ['#ff9ec6', '#ff5d9e', '#d83380']);
+    ctx.fillStyle = A.lg(ctx, 0, -24, 0, 2, ['#ff8a7a', '#e8392b', '#b3211a']);
     ctx.fill();
-    ctx.strokeStyle = '#b02468'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.strokeStyle = '#7d130e'; ctx.lineWidth = 1.5; ctx.stroke();
     A.rr(ctx, -24, -21, 48, 7, 4);
     ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fill();
     // 小燈
@@ -809,8 +869,8 @@ class ClawPhysics {
       trace(); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.6; ctx.translate(-1.2, -1); ctx.stroke(); ctx.translate(1.2, 1);
       // 爪尖粉紅橡膠套
       ctx.beginPath(); ctx.moveTo(tipX + 3, tipY - 14); ctx.lineTo(tipX - 2, tipY);
-      ctx.strokeStyle = '#d83380'; ctx.lineWidth = 8.5; ctx.stroke();
-      ctx.strokeStyle = '#ff7fb6'; ctx.lineWidth = 6.5; ctx.stroke();
+      ctx.strokeStyle = '#a82016'; ctx.lineWidth = 8.5; ctx.stroke();
+      ctx.strokeStyle = '#ff6a5a'; ctx.lineWidth = 6.5; ctx.stroke();
       ctx.beginPath(); ctx.moveTo(tipX + 2, tipY - 12); ctx.lineTo(tipX - 1, tipY - 4);
       ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1.6; ctx.stroke();
       // 關節
@@ -833,7 +893,7 @@ class ClawPhysics {
     ctx.fill();
     ctx.strokeStyle = '#4a3a68'; ctx.lineWidth = 1.8; ctx.stroke();
     A.rr(ctx, -15, hubY + 6, 30, 4, 2);
-    ctx.fillStyle = '#ff5d9e'; ctx.fill();
+    ctx.fillStyle = '#e8392b'; ctx.fill();
     A.sphere(ctx, 0, hubY + 14, 3.6, '#ffd54a', 0.5, 0.25);
     A.rr(ctx, -6, hubY - 6, 12, 8, 3);
     ctx.fillStyle = A.lg(ctx, -6, 0, 6, 0, ['#8b80a8', '#f3eefc', '#8b80a8']);
@@ -854,7 +914,8 @@ class ClawPhysics {
       ctx.save();
       ctx.translate(doll.x, doll.y);
       ctx.rotate(doll.rotation);
-      ctx.drawImage(bm.canvas, -bm.L / 2, -bm.L / 2, bm.L, bm.L);
+      const fs = doll.scale || 1;
+      ctx.drawImage(bm.canvas, -bm.L * fs / 2, -bm.L * fs / 2, bm.L * fs, bm.L * fs);
       ctx.restore();
 
       if (doll.y > this.height + 60) this.fallingWins.splice(i, 1);
@@ -897,15 +958,15 @@ class ClawPhysics {
     const y0 = top + (bot - top) * ((lo - dMin) / (dMax - dMin));
     const y1 = top + (bot - top) * ((hi - dMin) / (dMax - dMin));
     A.rr(ctx, x - 3, y0, 6, Math.max(6, y1 - y0), 3);
-    ctx.fillStyle = 'rgba(255,111,181,.45)'; ctx.fill();
+    ctx.fillStyle = 'rgba(255,59,48,.4)'; ctx.fill();
 
-    ctx.shadowColor = '#ff6fb5'; ctx.shadowBlur = 8;
-    A.sphere(ctx, x, my, 7, '#ff6fb5', 0.5, 0.25);
+    ctx.shadowColor = '#ff3b30'; ctx.shadowBlur = 8;
+    A.sphere(ctx, x, my, 7, '#ff3b30', 0.5, 0.25);
     ctx.shadowBlur = 0;
 
     ctx.font = '900 10px "Noto Sans TC", sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#b02468';
+    ctx.fillStyle = '#a82016';
     ctx.fillText('後', x, top - 16);
     ctx.fillText('前', x, bot + 16);
   }

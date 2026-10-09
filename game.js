@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     isMotorSoundPlaying: false,
     winOpen: false,        // 出貨卡片開啟時暫停倒數與操作
     releaseScheduled: false,
+    pendingSize: '標準',
     pendingPrize: null     // 目前出貨卡片上的獎品 (盲盒會在此被拆開)
   };
 
@@ -247,7 +248,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 獲勝出貨事件監聽
-  physics.onPrizeWon = (prizeType) => {
+  physics.onPrizeWon = (prizeType, doll) => {
+    state.pendingSize = doll ? ClawPhysics.sizeLabel(doll.scale) : '標準';
     state.prizesWonCount++;
 
     // 出貨時若在保夾中，重置累積金額
@@ -279,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
     elWinTitle.textContent = prizeType.blind ? '夾到盲盒了！' : '恭喜出貨！';
     elWinPreview.innerHTML = `<img src="${getPrizeSprite(prizeType.id, 140)}" alt="${prizeType.name}">`;
     elWinPrizeName.textContent = prizeType.name;
-    elWinRarity.innerHTML = rarityBadgeHTML(prizeType.rarity);
+    elWinRarity.innerHTML = rarityBadgeHTML(prizeType.rarity) + `<span class="size-chip">${state.pendingSize}尺寸</span>`;
     elWinDesc.textContent = prizeType.blind ? '到底會開出什麼呢？快拆開看看！' : prizeType.perk;
     elWinSpent.textContent = `累計投幣: ${state.totalCoinsInserted} 元`;
     elWinTag.textContent = wasGuaranteed ? '👑 保夾出貨' : '🎯 技術取物';
@@ -699,6 +701,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const valDropPower = document.getElementById('val-drop-power');
   const setBaffleHeight = document.getElementById('set-baffle-height');
   const valBaffleHeight = document.getElementById('val-baffle-height');
+  const setRodGap = document.getElementById('set-rod-gap');
+  const valRodGap = document.getElementById('val-rod-gap');
   const setTimerSec = document.getElementById('set-timer-sec');
   const valTimerSec = document.getElementById('val-timer-sec');
 
@@ -727,6 +731,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setBaffleHeight.value = physics.settings.baffleHeight;
     valBaffleHeight.textContent = `${setBaffleHeight.value} px`;
 
+    setRodGap.value = physics.rods.gap;
+    valRodGap.textContent = `${setRodGap.value} mm`;
+
     setTimerSec.value = state.timerSeconds;
     valTimerSec.textContent = `${setTimerSec.value} 秒`;
 
@@ -746,6 +753,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setBaffleHeight.addEventListener('input', (e) => {
     valBaffleHeight.textContent = `${e.target.value} px`;
   });
+  setRodGap.addEventListener('input', (e) => {
+    valRodGap.textContent = `${e.target.value} mm`;
+  });
   setTimerSec.addEventListener('input', (e) => {
     valTimerSec.textContent = `${e.target.value} 秒`;
   });
@@ -756,6 +766,7 @@ document.addEventListener('DOMContentLoaded', () => {
     physics.settings.carryVoltage = parseInt(setDropPower.value, 10);
     physics.settings.baffleHeight = parseInt(setBaffleHeight.value, 10);
     physics.chute.baffleHeight = physics.settings.baffleHeight;
+    physics.rods.gap = parseInt(setRodGap.value, 10);
     state.timerSeconds = parseInt(setTimerSec.value, 10);
 
     updateDisplays();
