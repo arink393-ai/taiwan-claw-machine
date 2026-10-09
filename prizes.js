@@ -18,6 +18,7 @@
   };
 
   const CATEGORY_LABEL = {
+    snack: '🍿 山崩零食',
     plush: '🧸 療癒娃娃',
     pillow: '🍉 食物抱枕',
     figurebox: '📦 公仔盒',
@@ -842,7 +843,38 @@
   const FIG_ROBOT = { kind: 'robot', outfit: '#4aa8ff', accent: '#ffd54a' };
   const FIG_DINO  = { hat: 'dino', hatColor: '#6fcf97', hair: '#6a4b2a', outfit: '#ffb347' };
 
+  // Original fictional package designs shared by the shelf, collection and 3D textures.
+  function drawPackage(ctx, r, cfg) {
+    const w=r*1.6,h=r*2.0;
+    ctx.save();
+    ctx.fillStyle=cfg.color;ctx.strokeStyle='#ffffff';ctx.lineWidth=2;
+    ctx.beginPath();ctx.roundRect(-w/2,-h/2,w,h,4);ctx.fill();ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillRect(-w/2+3,-h/2+3,w-6,5);ctx.fillRect(-w/2+3,h/2-8,w-6,5);
+    ctx.fillStyle='#fff6de';ctx.beginPath();ctx.ellipse(0,5,w*.37,h*.22,0,0,TAU);ctx.fill();
+    ctx.font=`${r*.65}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(cfg.icon,0,5);
+    ctx.fillStyle=cfg.ink||'#ffffff';ctx.font=`900 ${r*.29}px sans-serif`;ctx.fillText(cfg.label,0,-h*.29);
+    ctx.font=`700 ${r*.16}px sans-serif`;ctx.fillText(cfg.sub||'山崩限定',0,h*.35);
+    ctx.restore();
+  }
+  const SNACKS = [
+    ['chips','海苔洋芋片','#349361','🥔','洋芋片','厚切・海苔'],
+    ['corn','濃起司玉米棒','#f3a823','🌽','玉米棒','濃起司'],
+    ['cookies','巧克力夾心餅','#906047','🍪','夾心餅','CHOCO'],
+    ['gummy','水果軟糖分享包','#ed638e','🍓','水果軟糖','綜合水果'],
+    ['ramen','台式紅燒泡麵','#cf473d','🍜','紅燒牛肉麵','大滿足'],
+    ['popcorn','焦糖爆米花','#589ec9','🍿','爆米花','焦糖派對'],
+    ['marshmallow','彩虹棉花糖','#a287d5','☁️','棉花糖','RAINBOW'],
+    ['chocolate','金裝巧克力禮盒','#b88b2d','🍫','金裝巧克力','GOLD BOX']
+  ].map(([id,name,color,icon,label,sub])=>({id:'snack_'+id,cat:'snack',name,rarity:'N',radius:25,weight:.65,catchDifficulty:.3,catchRadius:34,spawn:10,perk:'輕巧包裝・挑山堆邊緣，帶動連鎖滑落',package:{color,icon,label,sub},draw:(c,r)=>drawPackage(c,r,{color,icon,label,sub})}));
+  const EXTRAS = [
+    ['headphones','無線耳機禮盒','#394b7b','🎧','無線耳機',18],
+    ['speaker','藍牙喇叭禮盒','#e49a58','🔊','藍牙喇叭',22],
+    ['console','掌上遊戲機禮盒','#66b9af','🎮','掌上遊戲機',35],
+    ['brick','積木城堡大盒','#ba75ab','🏰','積木城堡',28]
+  ].map(([id,name,color,icon,label,cost])=>({id:'ex_'+id,cat:'exchange',name,rarity:'SR',radius:31,weight:1,catchDifficulty:.5,catchRadius:34,spawn:0,exchange:true,cost,perk:'機頂夾換限定・使用遊戲兌換券',draw:(c,r)=>drawPackage(c,r,{color,icon,label,sub:'夾換限定'})}));
+
   const PRIZE_TYPES = [
+    ...SNACKS, ...EXTRAS,
     { id: 'bear',       cat: 'plush',     name: '泰迪小熊',       rarity: 'N',  radius: 30, weight: 1.0,  catchDifficulty: 0.40, catchRadius: 36, spawn: 8, perk: '圓滾滾的大頭 好夾又好抱', draw: drawBear },
     { id: 'bunny',      cat: 'plush',     name: '長耳兔兔',       rarity: 'N',  radius: 28, weight: 0.9,  catchDifficulty: 0.35, catchRadius: 36, spawn: 8, perk: '長耳朵就是現成的抓點', draw: drawBunny },
     { id: 'capybara',   cat: 'plush',     name: '水豚君卡比巴拉', rarity: 'N',  radius: 30, weight: 1.0,  catchDifficulty: 0.50, catchRadius: 36, spawn: 8, perk: '頭頂蜜柑 圓潤好抓', draw: drawCapybara },
@@ -942,7 +974,7 @@
     g.translate(px / 2, px / 2);
     const type = PRIZE_TYPES.find(t => t.id === id);
     if (type) {
-      const k = px / (type.radius * 3.3);
+      const k = px / (type.radius * (type.package || type.id.startsWith('ex_') && type.cat === 'exchange' ? 2.3 : 3.3));
       g.scale(k, k);
       type.draw(g, type.radius);
     } else {

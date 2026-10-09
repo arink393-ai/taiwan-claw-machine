@@ -1430,3 +1430,36 @@ body {
 .view-controls button {border:0;background:transparent;color:white;border-radius:20px;padding:7px 12px;cursor:pointer;font-weight:700;}
 .view-controls button.active {background:#ffd65c;color:#30233b;}
 .view-controls button:focus-visible {outline:2px solid white;}
+
+/* Full prize shelf, boxed exchange goods and tabletop scratch display. */
+.machine-topper {width:calc(100% - 28px); min-height:162px;gap:10px;margin-bottom:-8px;padding-bottom:12px;}
+.topper-shelf {max-width:380px;overflow:visible;position:relative;}
+.shelf-items {height:134px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));align-items:end;gap:3px;padding:0 6px 8px;width:100%;border-bottom:10px solid #77563b;background:linear-gradient(0deg,#d9b788 0 5px,transparent 5px);}
+.shelf-product {position:relative;display:flex;flex-direction:column;align-items:center;min-width:0;}
+.shelf-items .shelf-product img {display:block;width:64px;height:100px;max-width:135%;object-fit:contain;margin:0;transform:none;filter:drop-shadow(3px 4px 2px #46312055);}
+.shelf-product:nth-child(2n) {padding-bottom:12px;}
+.product-tag {background:#fff4cc;border:1px solid #ce8c30;color:#813e24;font-size:10px;font-weight:900;padding:1px 5px;white-space:nowrap;}
+.shelf-sign {margin-top:4px;}
+.scratch-rack {flex:none;width:100px;height:140px;background:linear-gradient(110deg,#72422d,#b58252);border:4px solid #d9b68b;border-radius:5px;box-shadow:4px 5px 0 #4b3024;}
+.scratch-card {width:42px;height:85px;bottom:27px;border-radius:2px;}
+.scratch-card:after {content:'刮開';position:absolute;bottom:9px;left:6px;right:6px;height:22px;background:linear-gradient(135deg,#c8cbd3,#eeeeef,#a4a8b3);color:#6a6a78;font-size:9px;display:grid;place-items:center;}
+.scratch-card i {font-size:9px;padding-bottom:22px;}
+.scratch-card.c1 {left:0;transform:rotate(-8deg);}.scratch-card.c2 {left:22px;}.scratch-card.c3 {left:44px;transform:rotate(8deg);}
+.scratch-top-label {position:absolute;top:4px;left:0;right:0;color:#fff3cf;font-size:8px;text-align:center;font-weight:900;}
+.rack-sign {bottom:3px;border-radius:3px;font-size:10px;}
+.clipboard {height:116px;transform:rotate(-2deg);}.kraft-bag {height:105px;}
+@media(max-width:600px){
+ .machine-topper{min-height:140px;gap:5px;width:calc(100% - 18px);}
+ .shelf-items{height:115px;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;padding:0 3px 5px;}
+ .shelf-product:nth-child(n+4){display:none;}.shelf-product:nth-child(2n){padding-bottom:8px;}
+ .shelf-items .shelf-product img{display:block;width:58px;height:82px;margin:0;}
+ .product-tag{font-size:8px;padding:1px 3px;}.shelf-sign{font-size:8px;padding:3px 5px;}
+ .scratch-rack{width:75px;height:116px;}.scratch-card{width:32px;height:68px;bottom:25px;}
+ .scratch-card.c2{left:16px;}.scratch-card.c3{left:30px;}.scratch-card i{font-size:7px;}
+ .scratch-top-label{font-size:6px;}.rack-sign{font-size:8px;}.clipboard{width:48px;height:98px;}
+ .kraft-bag{width:32px;height:87px;}.view-controls{top:10px;}.view-controls span{font-size:9px;padding:0 4px;}.view-controls button{padding:6px 9px;font-size:11px;}
+}
+
+.shelf-items {height:122px;}
+.shelf-items .shelf-product img {height:90px;}
+@media(max-width:600px){.shelf-items{height:110px;}.shelf-items .shelf-product img{height:80px;}}

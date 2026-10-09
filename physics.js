@@ -132,22 +132,19 @@ class ClawPhysics {
 
     // 三排貨架 (前 / 中 / 後)，每排各自堆一座小山，前排要避開洞口
     const lanes = [
-      { d: 0.95, from: baffleX + 80, step: 66, top: 86 },
-      { d: 0.70, from: 100, step: 74, top: 100 },
-      { d: 0.45, from: 100, step: 70, top: 110 }
+      {d: .94, from: baffleX + 50, to: endX, center: 345},
+      {d: .70, from: 78, to: endX, center: 315},
+      {d: .46, from: 78, to: endX, center: 290}
     ];
-
     for (const lane of lanes) {
-      const layers = [
-        { y: this.height - 75, step: lane.step, jitter: 10, off: 0 },
-        { y: this.height - 118, step: lane.step * 1.5, jitter: 10, off: lane.step * 0.5, skip: 0.35 }
-      ];
-      for (const L of layers) {
-        for (let x = lane.from + L.off; x <= endX; x += L.step) {
-          if (L.skip && Math.random() < L.skip) continue;
-          const jx = Math.random() * L.jitter - L.jitter / 2;
-          const depth = lane.d + (Math.random() - 0.5) * 0.06;
-          this.dolls.push(this.createDoll(pickPrizeType(), x + jx, L.y, depth, this.rollScale()));
+      for (let layer = 0; layer < 5; layer++) {
+        const inset = layer * 28;
+        for (let x = lane.from + inset; x <= lane.to - inset; x += 56) {
+          const type = pickPrizeType();
+          const scale = type.cat === 'snack' ? .9 + Math.random() * .25 : .78 + Math.random() * .25;
+          const doll = this.createDoll(type,x+(Math.random()-.5)*12,382-layer*45,lane.d+(Math.random()-.5)*.035,scale);
+          doll.rotation = (Math.random()-.5)*.7;
+          this.dolls.push(doll);
         }
       }
     }
@@ -520,6 +517,16 @@ class ClawPhysics {
       if (Math.random() <= successChance || this.settings.isGuaranteed) {
         this.claw.holdingPrize = closestDoll;
         closestDoll.isGrasped = true;
+        // Removing a support disturbs nearby packages; normal collisions carry the collapse.
+        for (const neighbor of this.dolls) {
+          if (neighbor === closestDoll || neighbor.isGrasped || neighbor.jam) continue;
+          const distance = Math.hypot(neighbor.x-closestDoll.x, neighbor.y-closestDoll.y);
+          if (Math.abs(neighbor.depth-closestDoll.depth)<.14 && distance<105) {
+            neighbor.vx += (neighbor.x < closestDoll.x ? -1 : 1) * (105-distance)*.8;
+            neighbor.vy += 25;
+            neighbor.rotVel += (neighbor.x < closestDoll.x ? -1 : 1)*.65;
+          }
+        }
         // 直上直下夾住，爪子沒有咬進去，一提起來就容易放開，娃娃留在原地
         const straight = 1 - this.claw.swing;
         this.claw.releaseOnLift = !this.settings.isGuaranteed && Math.random() < 0.75 * straight * straight;

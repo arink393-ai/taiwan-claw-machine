@@ -33,7 +33,19 @@ window.Claw3D = class {
       if(x>=1 && x<=2 && z>=6) continue;
       this.box(-275+x*50,-5,-175+z*50,50,10,50,(x+z)%2 ? '#c1b1df':'#f8f0ff');
     }
-    this.box(0,200,-205,600,400,10,'#d2c4eb');
+    this.box(0,200,-205,600,400,10,'#eae6ec');
+    // Retail-style backboard, stainless rails and warm interior strip lighting.
+    const board=document.createElement('canvas');board.width=1024;board.height=512;
+    const bc=board.getContext('2d');bc.fillStyle='#fff7dd';bc.fillRect(0,0,1024,512);
+    bc.strokeStyle='#eab244';bc.lineWidth=16;bc.strokeRect(16,16,992,480);
+    bc.textAlign='center';bc.fillStyle='#d64b32';bc.font='900 90px sans-serif';bc.fillText('滿滿山崩台',512,150);
+    bc.fillStyle='#68544b';bc.font='bold 42px sans-serif';bc.fillText('零食・娃娃・景品  混合大放送',512,245);
+    bc.font='bold 36px sans-serif';bc.fillText('夾出集券  ↑ 機頂限定品可夾換',512,325);
+    bc.fillStyle='#b87526';bc.font='28px sans-serif';bc.fillText('挑邊緣・移開支撐・試試連鎖滑落',512,415);
+    const sign=new T.Mesh(new T.PlaneGeometry(420,160),new T.MeshBasicMaterial({map:new T.CanvasTexture(board)}));
+    sign.position.set(0,260,-198);this.scene.add(sign);
+    for(const x of [-280,280])this.box(x,205,-192,8,320,8,new T.MeshBasicMaterial({color:0xfff1bb}));
+    this.box(0,394,0,580,6,380,'#f7f6ef');
     this.box(-300,200,0,10,400,410,'#e1d5f4');
     this.box(300,200,0,10,400,410,'#e1d5f4');
     this.box(-185,-45,165,110,80,80,'#242337');
@@ -63,8 +75,8 @@ window.Claw3D = class {
     this.resize(); physics.canvas.style.display='none';
   }
   setView(view) {
-    const positions={front:[100,290,850],side:[720,330,530],top:[0,950,220]};
-    this.camera.position.set(...positions[view]); this.camera.lookAt(0,175,0);
+    const positions={front:[0,200,940],side:[720,330,530],top:[0,950,220]};
+    this.camera.position.set(...positions[view]); this.camera.lookAt(0,view === 'front' ? 200 : 175,0);
   }
   resize() {
     const rect=this.physics.canvas.parentElement.getBoundingClientRect();
@@ -72,7 +84,18 @@ window.Claw3D = class {
   }
   createPrize(doll) {
     const T=THREE,g=new T.Group(),id=doll.type.id;
-    if(doll.type.cat!=='plush') {
+    if(doll.type.cat==='snack') {
+      const cfg=doll.type.package;
+      const art=document.createElement('canvas');art.width=256;art.height=256;
+      const c=art.getContext('2d');c.fillStyle=cfg.color;c.fillRect(0,0,256,256);c.translate(128,128);c.scale(3.5,3.5);doll.type.draw(c,25);
+      const face=new T.MeshStandardMaterial({map:new T.CanvasTexture(art),roughness:.4});
+      const side=this.material(cfg.color);
+      const mesh=new T.Mesh(new T.SphereGeometry(1,16,12),side);mesh.scale.set(25,32,13);g.add(mesh);mesh.castShadow=true;
+      const front=new T.Mesh(new T.PlaneGeometry(42,56),face);front.position.z=12;g.add(front);
+      for(const y of [-30,30])this.box(0,y,0,46,4,17,side,g);
+    } else if(doll.type.cat==='capsule') {
+      this.ball(g,0,0,0,25,'#bc8ce5');this.ball(g,0,10,1,21,'#e8ddff',1,.6,1);
+    } else if(doll.type.cat!=='plush') {
       const art=document.createElement('canvas'); art.width=256; art.height=256;
       const ctx=art.getContext('2d'); ctx.fillStyle='#fff4dc';ctx.fillRect(0,0,256,256);ctx.translate(128,128);ctx.scale(2.5,2.5); doll.type.draw(ctx,doll.type.radius);
       const face=new T.MeshStandardMaterial({map:new T.CanvasTexture(art),roughness:.6});
@@ -97,7 +120,7 @@ window.Claw3D = class {
     for(const [d,g] of this.models) if(!live.has(d)) {this.scene.remove(g);g.traverse(m=>{if(m.isMesh){m.geometry.dispose();const materials=Array.isArray(m.material)?m.material:[m.material];materials.forEach(mat=>{if(mat.map)mat.map.dispose();mat.dispose();});}});this.models.delete(d);}
     for(const d of p.dolls) {
       if(!this.models.has(d))this.models.set(d,this.createPrize(d));
-      const g=this.models.get(d);g.position.set(d.x-300,410-d.y,(d.depth-.65)*500);g.rotation.z=-d.rotation;
+      const g=this.models.get(d);g.position.set(d.x-300,410-d.y,(d.depth-.65)*500);g.rotation.z=-d.rotation;g.rotation.y=Math.sin(d.x*.1)*.2;
     }
     const z=(p.gantry.depth-.65)*500,cy=410-p.claw.y;
     this.carriage.position.set(p.gantry.x-300,350,z);
