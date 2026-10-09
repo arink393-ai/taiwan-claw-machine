@@ -89,3 +89,9 @@ http://localhost:8080/
 程式檔案：`index.html`、`style.css`、`prizes.js`（獎品圖鑑與繪圖）、`physics.js`（物理與渲染）、`game.js`（遊戲流程）、`audio.js`（音效）。
 
 若要在其他電腦或手機區網遊玩，可使用本機 IP：`http://<您的IP>:8080/`
+
+## 3D 櫥窗
+
+使用本地 Three.js 0.160.1 建立 WebGL 立體獎品、三爪、鋼索、天車、棋盤地板與出貨洞口。上方可切換正面、側面、俯視，操作沿用 WASD／方向鍵、空白鍵二停及 C 投幣。抓取與保夾沿用原有遊戲模擬，並非新增完整剛體物理引擎。WebGL 不可用時自動使用原版 Canvas 畫面。Three.js 授權位於 vendor/THREE-LICENSE.txt。
+
+本機預覽：`python3 -m http.server 8765`，開啟 http://localhost:8765。

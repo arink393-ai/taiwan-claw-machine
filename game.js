@@ -6,6 +6,12 @@
 document.addEventListener('DOMContentLoaded', () => {
   const canvas = document.getElementById('game-canvas');
   const physics = new ClawPhysics(canvas);
+  let scene3d;
+  try { scene3d = new Claw3D(physics); } catch (error) {
+    console.warn("3D 初始化失敗，使用原版畫面", error);
+    document.getElementById("scene-3d")?.remove();
+    canvas.style.display = "block";
+  }
 
   // 遊戲全域狀態
   const state = {
@@ -589,7 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 4. 畫布繪製
-    physics.render();
+    if (scene3d) scene3d.render(); else physics.render();
 
     requestAnimationFrame(gameLoop);
   }
