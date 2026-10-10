@@ -55,7 +55,7 @@ class ClawPhysics {
 
     // 台主手法：本拍的電壓加減值 (強拍 +、弱拍 -)，由 game.js 每局開始時設定
     this.beatMod = { grab: 0, carry: 0 };
-    this.tricks = { jam: true }; // 卡洞預擺
+    this.tricks = { jam: false }; // 卡洞預擺
 
     // 鋼索與爪子
     this.claw = {
@@ -294,7 +294,7 @@ class ClawPhysics {
     if (this.claw.holdingPrize) {
       const p = this.claw.holdingPrize;
       p.x = this.claw.x;
-      p.y = this.claw.y + p.radius * 0.6;
+      p.y = this.grabPoint().y + p.radius * 0.15;
       p.vx = (this.claw.angleVel * this.claw.cableLength) * 0.2;
       p.vy = 0;
       p.depth = this.gantry.depth;
@@ -368,7 +368,13 @@ class ClawPhysics {
             doll.vx -= 1.25 * vn * nx;
             doll.vy -= 1.25 * vn * ny;
           }
-          doll.rotVel += nx * 0.4;
+          // Resting overlap is not an impact: never add spin every frame.
+          if (vn < -20) doll.rotVel += nx * Math.min(1.2, -vn * .008);
+          if (Math.abs(doll.vx) < 8 && Math.abs(doll.vy) < 15) {
+            doll.rotVel *= Math.exp(-12 * dt);
+            if (Math.abs(doll.rotVel) < .03) doll.rotVel = 0;
+          }
+          doll.rotVel = Math.max(-2, Math.min(2, doll.rotVel));
         }
       }
 
@@ -481,16 +487,20 @@ class ClawPhysics {
     return 0.46 - 0.4 * this.carryPower;
   }
 
-  // 爪尖夾取點：爪子中心往下約 22px，視覺上就是三個爪尖圍起來的位置
+  // 爪尖夾取點：爪子中心往下約 60px，視覺上就是三個爪尖圍起來的位置
   grabPoint() {
-    return { x: this.claw.x, y: this.claw.y + 22 };
+    return { x: this.claw.x, y: this.claw.y + 60 };
   }
 
   // 爪子是否已碰到(插進)娃娃的上緣：下爪時用來判斷「到底」
   touchesDoll(doll) {
     if (!this.isInReach(doll)) return false;
     const g = this.grabPoint();
-    return Math.hypot(g.x - doll.x, g.y - doll.y) < doll.radius * 0.95;
+    return Math.hypot(g.x - doll.x, g.y - doll.y) < this.catchRange(doll);
+  }
+
+  catchRange(doll) {
+    return Math.max(doll.type.catchRadius * doll.scale, doll.radius * .95 + 10);
   }
 
   // 抓取檢測 (只能抓到景深範圍內的娃娃)
@@ -502,7 +512,7 @@ class ClawPhysics {
     for (const doll of this.dolls) {
       if (!this.isInReach(doll)) continue;
       const dist = Math.hypot(gp.x - doll.x, gp.y - doll.y);
-      if (dist < doll.type.catchRadius * doll.scale && dist < minDist) {
+      if (dist < this.catchRange(doll) && dist < minDist) {
         minDist = dist;
         closestDoll = doll;
       }

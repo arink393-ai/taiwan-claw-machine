@@ -54,7 +54,7 @@ window.Claw3D = class {
     this.box(0,370,120,580,8,10,this.metal);
     this.carriage = this.box(0,350,0,60,24,45,this.metal);
     this.cable = new T.Mesh(new T.CylinderGeometry(2,2,1,12),this.metal); this.scene.add(this.cable);
-    this.claw = new T.Group(); this.scene.add(this.claw);
+    this.claw = new T.Group(); this.claw.scale.setScalar(1.4); this.scene.add(this.claw);
     const red=new T.MeshStandardMaterial({color:0x881e37,metalness:.72,roughness:.3});
     const cylinder=(radius,height,y,mat)=>{const m=new T.Mesh(new T.CylinderGeometry(radius,radius,height,24),mat);m.position.y=y;this.claw.add(m);return m;};
     cylinder(15,42,20,this.metal);cylinder(17,7,38,red);cylinder(17,7,10,red);
@@ -71,7 +71,7 @@ window.Claw3D = class {
     const coilPoints=[];
     for(let i=0;i<=380;i++){const t=i/380,angle=t*Math.PI*2*23;coilPoints.push(new T.Vector3(-24+Math.cos(angle)*5,48-t*80,Math.sin(angle)*5+5));}
     this.claw.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(coilPoints),380,2,6,false),this.material('#202028')));
-    this.target = new T.Mesh(new T.RingGeometry(20,23,48),new T.MeshBasicMaterial({color:0xff4d82,side:T.DoubleSide}));
+    this.target = new T.Mesh(new T.RingGeometry(48,50,48),new T.MeshBasicMaterial({color:0xff4d82,side:T.DoubleSide}));
     this.target.rotation.x=-Math.PI/2; this.target.position.y=1; this.scene.add(this.target);
     this.models = new Map(); this.setView('front');
     const controls=document.createElement('div'); controls.className='view-controls';
