@@ -1027,55 +1027,136 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-close-exchange').addEventListener('click', () => modalExchange.classList.add('hidden'));
   document.getElementById('btn-exchange-close2').addEventListener('click', () => modalExchange.classList.add('hidden'));
 
-  // 刮刮樂
-  const SCRATCH_REWARDS = [
-    { w: 35, icon: '🍀', text: '銘謝惠顧，再接再厲！', apply: () => {} },
-    { w: 30, icon: '🪙', text: '加送 1 局！', apply: () => addCredits(1) },
-    { w: 17, icon: '🪙', text: '加送 3 局！', apply: () => addCredits(3) },
-    { w: 10, icon: '🔋', text: '保夾金額 +100！', apply: () => { state.accumulatedPrice += 100; updateDisplays(); } },
-    { w: 6,  icon: '💰', text: '加送 10 局！！', apply: () => addCredits(10) },
-    { w: 2,  icon: '👑', text: '大獎！隱藏款公仔！', apply: () => {
-        const ssr = BLIND_FIGURES.filter(f => f.rarity === 'SSR');
-        const fig = ssr[Math.floor(Math.random() * ssr.length)];
-        state.collection[fig.id] = (state.collection[fig.id] || 0) + 1;
-        return `大獎！獲得隱藏款「${fig.name}」！`;
-      } }
-  ];
-
+  // 黑點刮刮卡：卡上有兩組中獎號碼(各對應一種獎項)，下面 12 個黑點各蓋著一個號碼，
+  // 刮出的號碼和中獎號碼一樣就中獎 (實機最常見的刮法)
   function addCredits(n) {
     state.credits += n;
     updateDisplays();
     if (state.mode === 'IDLE') startNextRound();
   }
 
-  const scratchCanvas = document.getElementById('scratch-canvas');
-  const scratchCtx = scratchCanvas.getContext('2d');
-  const scratchResult = document.getElementById('scratch-result');
-  const btnScratchBuy = document.getElementById('btn-scratch-buy');
-  const btnScratchAll = document.getElementById('btn-scratch-all');
-  const scratch = { active: false, reward: null, drawing: false, revealed: false };
-
-  function paintCoating() {
-    const W = scratchCanvas.width, H = scratchCanvas.height;
-    scratchCtx.globalCompositeOperation = 'source-over';
-    const g = scratchCtx.createLinearGradient(0, 0, W, H);
-    g.addColorStop(0, '#d9dde4'); g.addColorStop(0.5, '#f4f6fa'); g.addColorStop(1, '#b9bfca');
-    scratchCtx.fillStyle = g;
-    scratchCtx.fillRect(0, 0, W, H);
-    scratchCtx.fillStyle = 'rgba(120,130,150,.35)';
-    for (let i = 0; i < 160; i++) scratchCtx.fillRect(Math.random() * W, Math.random() * H, 2, 2);
-    scratchCtx.fillStyle = '#7a8296';
-    scratchCtx.font = '900 24px "Noto Sans TC", sans-serif';
-    scratchCtx.textAlign = 'center';
-    scratchCtx.textBaseline = 'middle';
-    scratchCtx.fillText('用手指／滑鼠刮開', W / 2, H / 2);
+  function giveHiddenFigure() {
+    const ssr = BLIND_FIGURES.filter(f => f.rarity === 'SSR');
+    const fig = ssr[Math.floor(Math.random() * ssr.length)];
+    state.collection[fig.id] = (state.collection[fig.id] || 0) + 1;
+    return `隱藏款「${fig.name}」`;
   }
 
-  function pickReward() {
-    const total = SCRATCH_REWARDS.reduce((s, r) => s + r.w, 0);
+  const SMALL_REWARDS = [
+    { w: 50, text: '加送 1 局', apply: () => { addCredits(1); } },
+    { w: 35, text: '加送 3 局', apply: () => { addCredits(3); } },
+    { w: 15, text: '保夾金額 +100', apply: () => { state.accumulatedPrice += 100; updateDisplays(); } }
+  ];
+  const BIG_REWARDS = [
+    { w: 50, text: '加送 10 局', apply: () => { addCredits(10); } },
+    { w: 30, text: '保夾金額 +200', apply: () => { state.accumulatedPrice += 200; updateDisplays(); } },
+    { w: 20, text: '隱藏款公仔！', apply: () => giveHiddenFigure() }
+  ];
+
+  function pickWeighted(list) {
+    const total = list.reduce((s, r) => s + r.w, 0);
     let roll = Math.random() * total;
-    for (const r of SCRATCH_REWARDS) { roll -= r.w; if (roll <= 0) return r; }
-    return SCRATCH_REWARDS[0];
+    for (const r of list) { roll -= r.w; if (roll <= 0) return r; }
+    return list[0];
+  }
+
+  const DOT_COUNT = 12;
+  const dcWins = document.getElementById('dc-wins');
+  const dcGrid = document.getElementById('dc-grid');
+  const dcStatus = document.getElementById('dc-status');
+  const btnScratchBuy = document.getElementById('btn-scratch-buy');
+  const btnScratchAll = document.getElementById('btn-scratch-all');
+  const scratch = { active: false, dots: [], wins: [], drawing: false };
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  function paintDot(canvas) {
+    const c = canvas.getContext('2d');
+    const S = canvas.width;
+    c.globalCompositeOperation = 'source-over';
+    const g = c.createRadialGradient(S * 0.36, S * 0.3, 2, S / 2, S / 2, S / 2);
+    g.addColorStop(0, '#5a5a62'); g.addColorStop(0.45, '#1c1c20'); g.addColorStop(1, '#050507');
+    c.fillStyle = g;
+    c.beginPath(); c.arc(S / 2, S / 2, S / 2, 0, Math.PI * 2); c.fill();
+    c.fillStyle = 'rgba(255,255,255,.16)';
+    c.beginPath(); c.ellipse(S * 0.36, S * 0.28, S * 0.2, S * 0.1, -0.5, 0, Math.PI * 2); c.fill();
+  }
+
+  // 發牌：決定這張卡中不中、中哪個獎，再把號碼排進 12 個黑點
+  function dealCard() {
+    const nums = [];
+    while (nums.length < DOT_COUNT + 2) {
+      const n = 1 + Math.floor(Math.random() * 40);
+      if (!nums.includes(n)) nums.push(n);
+    }
+    const winA = { num: nums[0], reward: pickWeighted(SMALL_REWARDS) };
+    const winB = { num: nums[1], reward: pickWeighted(BIG_REWARDS) };
+    const dotNums = nums.slice(2);
+
+    const roll = Math.random();
+    const hit = roll < 0.40 ? [] : roll < 0.80 ? [winA] : roll < 0.97 ? [winB] : [winA, winB];
+    const slots = [...Array(DOT_COUNT).keys()].sort(() => Math.random() - 0.5);
+    hit.forEach((w, i) => { dotNums[slots[i]] = w.num; });
+    return { wins: [winA, winB], dotNums };
+  }
+
+  function renderCard(card) {
+    dcWins.innerHTML = card.wins.map(w =>
+      `<div class="dc-win"><b>${pad2(w.num)}</b><span>${w.reward.text}</span></div>`).join('');
+    dcGrid.innerHTML = '';
+    scratch.dots = card.dotNums.map((num, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'dc-cell';
+      cell.innerHTML = `<span class="dc-num">${pad2(num)}</span>`;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 64;
+      canvas.className = 'dc-coat';
+      paintDot(canvas);
+      cell.appendChild(canvas);
+      dcGrid.appendChild(cell);
+      return { num, cell, canvas, ctx: canvas.getContext('2d'), revealed: false };
+    });
+  }
+
+  // 只計算圓形黑點「內部」被刮掉的比例 (方形畫布的四個角本來就是透明的)
+  function dotCoverage(dot) {
+    const S = dot.canvas.width, R = S / 2;
+    const data = dot.ctx.getImageData(0, 0, S, S).data;
+    let clear = 0, total = 0;
+    for (let y = 1; y < S; y += 3) {
+      for (let x = 1; x < S; x += 3) {
+        if ((x - R) * (x - R) + (y - R) * (y - R) > R * R) continue;
+        total++;
+        if (data[(y * S + x) * 4 + 3] < 40) clear++;
+      }
+    }
+    return clear / total;
+  }
+
+  function revealDot(dot, auto) {
+    if (dot.revealed) return;
+    dot.revealed = true;
+    dot.canvas.classList.add('gone');
+    const win = scratch.wins.find(w => w.num === dot.num && !w.claimed);
+    if (win) {
+      win.claimed = true;
+      dot.cell.classList.add('hit');
+      const msg = win.reward.apply();
+      dcStatus.textContent = `🎉 刮中 ${pad2(win.num)}！${win.reward.text}${typeof msg === 'string' ? '（' + msg + '）' : ''}`;
+      saveGame();
+      updateDisplays();
+      window.clawAudio.playReveal(win.reward.text.includes('隱藏') ? 'SSR' : 'R');
+    } else if (!auto) {
+      window.clawAudio.playClick();
+    }
+    if (scratch.dots.every(d => d.revealed)) finishCard();
+  }
+
+  function finishCard() {
+    scratch.active = false;
+    btnScratchAll.disabled = true;
+    if (!scratch.wins.some(w => w.claimed)) dcStatus.textContent = '銘謝惠顧，再刮一張試試手氣！';
+    renderExchange();
   }
 
   btnScratchBuy.addEventListener('click', () => {
@@ -1083,69 +1164,65 @@ document.addEventListener('DOMContentLoaded', () => {
     state.tickets -= SCRATCH_COST;
     saveGame();
     updateDisplays();
+    const card = dealCard();
+    scratch.wins = card.wins.map(w => ({ ...w, claimed: false }));
     scratch.active = true;
-    scratch.revealed = false;
-    scratch.reward = pickReward();
-    scratchResult.innerHTML = `<span class="sr-icon">${scratch.reward.icon}</span><span>${scratch.reward.text}</span>`;
-    scratchCanvas.style.opacity = 1;
-    paintCoating();
+    renderCard(card);
+    dcStatus.textContent = '用滑鼠／手指刮開黑點！';
     btnScratchAll.disabled = false;
     window.clawAudio.playClick();
     renderExchange();
   });
 
-  function revealScratch() {
-    if (!scratch.active || scratch.revealed) return;
-    scratch.revealed = true;
-    scratchCanvas.style.opacity = 0;
-    const msg = scratch.reward.apply();
-    if (typeof msg === 'string') scratchResult.innerHTML = `<span class="sr-icon">${scratch.reward.icon}</span><span>${msg}</span>`;
-    saveGame();
-    updateDisplays();
-    window.clawAudio.playReveal(scratch.reward.w <= 2 ? 'SSR' : scratch.reward.w <= 10 ? 'R' : 'N');
-    scratch.active = false;
-    btnScratchAll.disabled = true;
-    renderExchange();
+  btnScratchAll.addEventListener('click', () => {
+    scratch.dots.forEach(d => revealDot(d, true));
+  });
+
+  // 刮除：用指標事件找出手指下方的黑點，在上面挖洞
+  function scratchPoint(clientX, clientY) {
+    if (!scratch.active) return;
+    const el = document.elementFromPoint(clientX, clientY);
+    const dot = scratch.dots.find(d => d.canvas === el);
+    if (!dot || dot.revealed) return;
+    const rect = dot.canvas.getBoundingClientRect();
+    const x = (clientX - rect.left) * (dot.canvas.width / rect.width);
+    const y = (clientY - rect.top) * (dot.canvas.height / rect.height);
+    dot.ctx.globalCompositeOperation = 'destination-out';
+    dot.ctx.fillStyle = '#000'; // destination-out 依來源透明度擦除，必須用不透明色
+    dot.ctx.beginPath();
+    dot.ctx.arc(x, y, 11, 0, Math.PI * 2);
+    dot.ctx.fill();
+    dot.touched = true;
   }
 
-  btnScratchAll.addEventListener('click', revealScratch);
-
-  function scratchAt(clientX, clientY) {
-    const rect = scratchCanvas.getBoundingClientRect();
-    const x = (clientX - rect.left) * (scratchCanvas.width / rect.width);
-    const y = (clientY - rect.top) * (scratchCanvas.height / rect.height);
-    scratchCtx.globalCompositeOperation = 'destination-out';
-    scratchCtx.beginPath();
-    scratchCtx.arc(x, y, 16, 0, Math.PI * 2);
-    scratchCtx.fill();
+  function scratchSettle() {
+    scratch.dots.forEach(d => {
+      if (d.touched && !d.revealed && dotCoverage(d) > 0.55) revealDot(d, false);
+    });
   }
 
-  function scratchedRatio() {
-    const { width: W, height: H } = scratchCanvas;
-    const data = scratchCtx.getImageData(0, 0, W, H).data;
-    let clear = 0, total = 0;
-    for (let i = 3; i < data.length; i += 4 * 16) { total++; if (data[i] < 40) clear++; }
-    return clear / total;
-  }
-
-  function scratchMove(e) {
-    if (!scratch.drawing || !scratch.active) return;
-    const p = e.touches ? e.touches[0] : e;
-    scratchAt(p.clientX, p.clientY);
+  dcGrid.addEventListener('pointerdown', (e) => {
+    scratch.drawing = true;
+    try { dcGrid.setPointerCapture(e.pointerId); } catch (err) { /* 合成事件沒有作用中的指標 */ }
+    scratchPoint(e.clientX, e.clientY);
     e.preventDefault();
-  }
-  scratchCanvas.addEventListener('mousedown', (e) => { scratch.drawing = true; scratchMove(e); });
-  scratchCanvas.addEventListener('touchstart', (e) => { scratch.drawing = true; scratchMove(e); }, { passive: false });
-  scratchCanvas.addEventListener('mousemove', scratchMove);
-  scratchCanvas.addEventListener('touchmove', scratchMove, { passive: false });
-  const scratchEnd = () => {
+  });
+  dcGrid.addEventListener('pointermove', (e) => {
+    if (!scratch.drawing) return;
+    scratchPoint(e.clientX, e.clientY);
+    scratchSettle();
+  });
+  const dcEnd = () => {
     if (!scratch.drawing) return;
     scratch.drawing = false;
-    if (scratch.active && scratchedRatio() > 0.5) revealScratch();
+    scratchSettle();
   };
-  window.addEventListener('mouseup', scratchEnd);
-  window.addEventListener('touchend', scratchEnd);
-  paintCoating();
+  dcGrid.addEventListener('pointerup', dcEnd);
+  dcGrid.addEventListener('pointercancel', dcEnd);
+
+  // 開始前先畫一張「空白卡」(黑點不能刮)
+  renderCard({ wins: [{ num: 7, reward: { text: '加送 3 局' } }, { num: 23, reward: { text: '大獎' } }], dotNums: [...Array(DOT_COUNT).keys()].map(i => i + 1) });
+  scratch.dots = [];
 
   // -------------------------------------------------------------
   // 本機獎品跑馬展示條 + 背景漂浮裝飾
