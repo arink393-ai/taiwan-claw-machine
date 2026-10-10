@@ -6,6 +6,12 @@
 document.addEventListener('DOMContentLoaded', () => {
   const canvas = document.getElementById('game-canvas');
   const physics = new ClawPhysics(canvas);
+  let scene3d;
+  try { scene3d = new Claw3D(physics); } catch (error) {
+    console.warn("3D 初始化失敗，使用原版畫面", error);
+    document.getElementById("scene-3d")?.remove();
+    canvas.style.display = "block";
+  }
 
   // 遊戲全域狀態
   const state = {
@@ -589,7 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 4. 畫布繪製
-    physics.render();
+    if (scene3d) scene3d.render(); else physics.render();
 
     requestAnimationFrame(gameLoop);
   }
@@ -981,12 +987,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 機頂夾換區展示：高價值的盒裝公仔、盲盒
   const shelfItems = document.getElementById('shelf-items');
-  ['ex_god', 'fb_hero', 'blind_gold', 'fb_qposket', 'fig_robot', 'fb_top', 'blind_star', 'ex_robot', 'fb_monster', 'blind_sweet', 'ex_gold'].forEach((id, i) => {
-    const img = document.createElement('img');
-    img.src = getPrizeSprite(id, 72);
-    img.alt = '';
-    img.style.setProperty('--rot', `${(i % 2 ? 1 : -1) * (2 + (i * 3) % 5)}deg`);
-    shelfItems.appendChild(img);
+  ['ex_console','ex_headphones','ex_brick','ex_speaker','ex_robot','ex_gold'].forEach((id, i) => {
+    const type=PRIZE_TYPES.find(t=>t.id===id);
+    const item=document.createElement('span');item.className='shelf-product';
+    const img=document.createElement('img');img.src=getPrizeSprite(id,144);img.alt=type.name;
+    const tag=document.createElement('span');tag.className='product-tag';tag.textContent=type.cost+' 券';
+    item.append(img,tag);shelfItems.append(item);
   });
 
   function renderExchange() {
