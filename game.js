@@ -987,6 +987,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 機頂夾換區展示：高價值的盒裝公仔、盲盒
   const shelfItems = document.getElementById('shelf-items');
+  const scratchRack=document.getElementById('scratch-rack');
+  const scratchDots=document.createElement('span');scratchDots.className='scratch-dot-grid';scratchDots.setAttribute('aria-hidden','true');
+  for(let i=0;i<100;i++){const dot=document.createElement('i');if([7,18,32,45,67,81].includes(i)){dot.className='revealed';dot.textContent=String(i+1).padStart(2,'0');}scratchDots.append(dot);}scratchRack.append(scratchDots);
+
   ['ex_console','ex_headphones','ex_brick','ex_speaker','ex_robot','ex_gold'].forEach((id, i) => {
     const type=PRIZE_TYPES.find(t=>t.id===id);
     const item=document.createElement('span');item.className='shelf-product';

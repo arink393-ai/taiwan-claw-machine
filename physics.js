@@ -140,8 +140,9 @@ class ClawPhysics {
       for (let layer = 0; layer < 5; layer++) {
         const inset = layer * 28;
         for (let x = lane.from + inset; x <= lane.to - inset; x += 56) {
-          const type = pickPrizeType();
-          const scale = type.cat === 'snack' ? .9 + Math.random() * .25 : .78 + Math.random() * .25;
+          const pool=PRIZE_TYPES.filter(t=>t.spawn>0&&t.cat!=='snack');
+          const type = Math.random()<.82 ? pool[Math.floor(Math.random()*pool.length)] : pickPrizeType();
+          const scale = type.cat === 'snack' ? .9 + Math.random() * .25 : .86 + Math.random() * .34;
           const doll = this.createDoll(type,x+(Math.random()-.5)*12,382-layer*45,lane.d+(Math.random()-.5)*.035,scale);
           doll.rotation = (Math.random()-.5)*.7;
           this.dolls.push(doll);
