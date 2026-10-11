@@ -135,6 +135,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 更新儀表板顯示
   function updateDisplays() {
+    document.querySelectorAll('[data-machine-mode]').forEach(button=>button.disabled=state.mode!=='IDLE'||state.winOpen);
+    const modeHint=document.getElementById('mode-hint');
+    if(modeHint)modeHint.textContent=state.mode==='IDLE'&&!state.winOpen ? '待機時可切換，切換後會重新補貨。' : '本局結束並領取獎品後，可切換機台。';
     elDispCredits.textContent = String(state.credits).padStart(2, '0');
     elDispGuarantee.textContent = String(state.guaranteePrice).padStart(3, '0');
     elDispAccumulated.textContent = String(state.accumulatedPrice).padStart(3, '0');
@@ -1238,14 +1241,26 @@ document.addEventListener('DOMContentLoaded', () => {
   // 本機獎品跑馬展示條 + 背景漂浮裝飾
   // -------------------------------------------------------------
   const tickerTrack = document.getElementById('ticker-track');
-  const tickerHTML = PRIZE_TYPES.filter(t => t.spawn > 0).map(t => {
-    const r = RARITY[t.rarity];
-    return `<div class="ticker-item" style="--rc:${r.color}" title="${t.name}">
-      <img src="${getPrizeSprite(t.id, 56)}" alt="${t.name}">
-      <span>${t.name}</span>
-    </div>`;
-  }).join('');
-  tickerTrack.innerHTML = tickerHTML + tickerHTML; // 複製一份做無縫循環
+  function refreshMachineMode() {
+    const config=MACHINE_MODES[physics.machineMode];
+    document.getElementById('mode-description').textContent=config.description;
+    document.querySelectorAll('[data-machine-mode]').forEach(button=>{const active=button.dataset.machineMode===physics.machineMode;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
+    document.querySelector('.badge').textContent='TAIWAN · '+config.name;
+    const tickerHTML=PRIZE_TYPES.filter(config.filter).map(t=>`<div class="ticker-item" style="--rc:${RARITY[t.rarity].color}" title="${t.name}"><img src="${getPrizeSprite(t.id,56)}" alt="${t.name}"><span>${t.name}</span></div>`).join('');
+    tickerTrack.innerHTML=tickerHTML+tickerHTML;
+    if(scene3d)scene3d.setMachineMode(physics.machineMode);
+  }
+  const modeButtons=document.getElementById('mode-buttons');
+  for(const [key,config] of Object.entries(MACHINE_MODES)) {
+    const button=document.createElement('button');button.type='button';button.dataset.machineMode=key;button.textContent=config.icon+' '+config.name;
+    button.addEventListener('click',()=>{
+      if(state.mode!=='IDLE'||state.winOpen||key===physics.machineMode)return;
+      physics.machineMode=key;physics.initDolls();
+      try{localStorage.setItem('claw-machine-mode',key);}catch(_){}
+      refreshMachineMode();updateDisplays();
+    });modeButtons.append(button);
+  }
+  refreshMachineMode();
 
   const ambient = document.querySelector('.ambient-lights');
   const deco = ['⭐', '💖', '✨', '🫧', '🍬', '🧸', '🌸'];

@@ -18,6 +18,7 @@
   };
 
   const CATEGORY_LABEL = {
+    electronics: '🎧 3C 商品',
     snack: '🍿 山崩零食',
     plush: '🧸 療癒娃娃',
     pillow: '🍉 食物抱枕',
@@ -873,8 +874,17 @@
     ['brick','積木城堡大盒','#ba75ab','🏰','積木城堡',28]
   ].map(([id,name,color,icon,label,cost])=>({id:'ex_'+id,cat:'exchange',name,rarity:'SR',radius:31,weight:1,catchDifficulty:.5,catchRadius:34,spawn:0,exchange:true,cost,perk:'機頂夾換限定・使用遊戲兌換券',draw:(c,r)=>drawPackage(c,r,{color,icon,label,sub:'夾換限定'})}));
 
+  const ELECTRONICS = [
+    ['earbuds','真無線藍牙耳機','#354a73','🎧',28,1.05],
+    ['speaker','便攜藍牙喇叭','#d38544','🔊',32,1.25],
+    ['powerbank','行動電源禮盒','#4b8e86','🔋',30,1.3],
+    ['watch','智慧手錶禮盒','#634d87','⌚',27,.95],
+    ['controller','無線遊戲手把','#3c4b69','🎮',34,1.2],
+    ['lamp','桌上氛圍燈禮盒','#bc8b41','💡',33,1.1]
+  ].map(([id,name,color,icon,radius,weight])=>({id:'tech_'+id,cat:'electronics',name,rarity:'R',radius,weight,catchDifficulty:.58,catchRadius:radius+5,spawn:5,perk:'盒裝3C・對準邊角，二停夾穩',draw:(c,r)=>drawPackage(c,r,{color,icon,label:name.replace('禮盒',''),sub:'DIGITAL SERIES'})}));
+
   const PRIZE_TYPES = [
-    ...SNACKS, ...EXTRAS,
+    ...SNACKS, ...EXTRAS, ...ELECTRONICS,
     { id: 'bear',       cat: 'plush',     name: '泰迪小熊',       rarity: 'N',  radius: 30, weight: 1.0,  catchDifficulty: 0.40, catchRadius: 36, spawn: 8, perk: '圓滾滾的大頭 好夾又好抱', draw: drawBear },
     { id: 'bunny',      cat: 'plush',     name: '長耳兔兔',       rarity: 'N',  radius: 28, weight: 0.9,  catchDifficulty: 0.35, catchRadius: 36, spawn: 8, perk: '長耳朵就是現成的抓點', draw: drawBunny },
     { id: 'capybara',   cat: 'plush',     name: '水豚君卡比巴拉', rarity: 'N',  radius: 30, weight: 1.0,  catchDifficulty: 0.50, catchRadius: 36, spawn: 8, perk: '頭頂蜜柑 圓潤好抓', draw: drawCapybara },
@@ -987,6 +997,12 @@
     return (spriteCache[key] = canvas.toDataURL('image/png'));
   }
 
+  window.MACHINE_MODES = {
+    avalanche: {name:'山崩台',icon:'⛰️',description:'娃娃、零食與景品高堆混合，移開支撐試試連鎖滑落。',layers:5,step:56,filter:t=>t.spawn>0&&t.cat!=='electronics'},
+    figure: {name:'公仔台',icon:'🎁',description:'景品盒與盲盒錯位擺放，瞄準盒角、善用二停。',layers:2,step:90,filter:t=>t.spawn>0&&['figurebox','blindbox'].includes(t.cat)},
+    tech: {name:'3C 台',icon:'🎧',description:'耳機、喇叭、行動電源與手把禮盒，少量疏排、對準邊角。',layers:1,step:110,filter:t=>t.cat==='electronics'},
+    plush: {name:'娃娃台',icon:'🧸',description:'絨毛娃娃專台，大小混搭，瞄準身體中心夾取。',layers:3,step:75,filter:t=>t.spawn>0&&t.cat==='plush'}
+  };
   window.PRIZE_TYPES = PRIZE_TYPES;
   window.BLIND_FIGURES = BLIND_FIGURES;
   window.COLLECTIBLES = COLLECTIBLES;

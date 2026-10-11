@@ -43,7 +43,7 @@ window.Claw3D = class {
     bc.font='bold 36px sans-serif';bc.fillText('夾出集券  ↑ 機頂限定品可夾換',512,325);
     bc.fillStyle='#b87526';bc.font='28px sans-serif';bc.fillText('挑邊緣・移開支撐・試試連鎖滑落',512,415);
     const sign=new T.Mesh(new T.PlaneGeometry(420,160),new T.MeshBasicMaterial({map:new T.CanvasTexture(board)}));
-    sign.position.set(0,260,-198);this.scene.add(sign);
+    sign.position.set(0,260,-198);this.scene.add(sign);this.modeSign=sign;
     for(const x of [-280,280])this.box(x,205,-192,8,320,8,new T.MeshBasicMaterial({color:0xfff1bb}));
     this.box(0,394,0,580,6,380,'#f7f6ef');
     this.box(-300,200,0,10,400,410,'#d5d8dc');
@@ -80,6 +80,14 @@ window.Claw3D = class {
     controls.addEventListener('click',e=>{if(!e.target.dataset.view)return; this.setView(e.target.dataset.view); controls.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b===e.target));});
     this.resizeObserver=new ResizeObserver(()=>this.resize()); this.resizeObserver.observe(physics.canvas.parentElement);
     this.resize(); physics.canvas.style.display='none';
+  }
+  setMachineMode(key) {
+    const config=MACHINE_MODES[key],canvas=document.createElement('canvas');canvas.width=1024;canvas.height=512;
+    const c=canvas.getContext('2d');c.fillStyle=key==='tech'?'#e7edf4':key==='figure'?'#f3e9f5':'#fff7dd';c.fillRect(0,0,1024,512);
+    c.strokeStyle='#c4a24f';c.lineWidth=14;c.strokeRect(12,12,1000,488);c.textAlign='center';c.fillStyle='#8c3d36';c.font='900 100px sans-serif';c.fillText(config.name,512,160);
+    c.fillStyle='#494b55';c.font='bold 34px sans-serif';c.fillText(config.description.slice(0,19),512,270);c.fillText(config.description.slice(19),512,325);
+    c.font='28px sans-serif';c.fillText('投幣 10 元・夾出集券・機頂夾換',512,420);
+    this.modeSign.material.map.dispose();this.modeSign.material.map=new THREE.CanvasTexture(canvas);this.modeSign.material.needsUpdate=true;
   }
   setView(view) {
     const positions={front:[0,200,940],side:[720,330,530],top:[0,950,220]};

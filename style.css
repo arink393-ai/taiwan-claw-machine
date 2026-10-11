@@ -1532,3 +1532,11 @@ body {background:#e8e4de;}
 .console-plate {min-height:155px;}.joystick-section .control-label {margin-bottom:15px;}
 .machine-lower {min-height:185px;background:radial-gradient(circle at 12% 80%,#fff8 0 9px,transparent 10px),radial-gradient(circle at 90% 20%,#efb655 0 30px,transparent 31px);}
 @media(max-width:600px){.console-plate{min-height:150px;}.machine-lower{min-height:165px;}}
+
+.mode-selector {max-width:660px;width:100%;padding:14px 16px;margin:12px auto 18px;border:1px solid #cbb77a;border-radius:8px;background:#fff9e9;color:#54452b;box-shadow:0 4px 12px #543c1715;}
+.mode-buttons {display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.mode-buttons button {font:700 15px 'Noto Sans TC',sans-serif;border:1px solid #d4c298;border-radius:5px;background:#fff;padding:10px 5px;color:#554a35;cursor:pointer;}
+.mode-buttons button.active {background:#f5ce3d;border-color:#b58b14;color:#332711;box-shadow:inset 0 -3px #d7af23;}
+.mode-buttons button:disabled {cursor:default;opacity:.65;}.mode-buttons button:focus-visible{outline:3px solid #835da7;outline-offset:2px;}
+#mode-description {font-size:13px;line-height:1.6;margin:10px 0 4px;}#mode-hint{font-size:11px;color:#846f49;}
+@media(max-width:600px){.mode-selector{width:calc(100% - 20px);padding:10px;}.mode-buttons{gap:5px;}.mode-buttons button{font-size:12px;padding:9px 2px;}#mode-description{font-size:12px;}}

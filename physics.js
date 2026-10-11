@@ -93,6 +93,8 @@ class ClawPhysics {
     this.time = 0;
     this.lastDt = 0.016;
 
+    this.machineMode = 'avalanche';
+    try { const saved=localStorage.getItem('claw-machine-mode'); if(MACHINE_MODES[saved]) this.machineMode=saved; } catch (_) {}
     this.backdrop = this.buildBackdrop();
     this.initDolls();
   }
@@ -127,6 +129,8 @@ class ClawPhysics {
     this.settleTimer = 3;
     // 山堆剛鋪好、尚在垮落的幾秒內，掉進洞口的娃娃視為「滑出堆外」，放回山上而不算出貨
     this.graceTimer = 7;
+    const config=MACHINE_MODES[this.machineMode];
+    const pool=PRIZE_TYPES.filter(config.filter);
     const baffleX = this.chute.x + this.chute.width;
     const endX = this.bounds.maxX - 24;
 
@@ -137,11 +141,10 @@ class ClawPhysics {
       {d: .46, from: 78, to: endX, center: 290}
     ];
     for (const lane of lanes) {
-      for (let layer = 0; layer < 5; layer++) {
+      for (let layer = 0; layer < config.layers; layer++) {
         const inset = layer * 28;
-        for (let x = lane.from + inset; x <= lane.to - inset; x += 56) {
-          const pool=PRIZE_TYPES.filter(t=>t.spawn>0&&t.cat!=='snack');
-          const type = Math.random()<.82 ? pool[Math.floor(Math.random()*pool.length)] : pickPrizeType();
+        for (let x = lane.from + inset; x <= lane.to - inset; x += config.step) {
+          const type = pool[Math.floor(Math.random()*pool.length)];
           const scale = type.cat === 'snack' ? .9 + Math.random() * .25 : .86 + Math.random() * .34;
           const doll = this.createDoll(type,x+(Math.random()-.5)*12,382-layer*45,lane.d+(Math.random()-.5)*.035,scale);
           doll.rotation = (Math.random()-.5)*.7;
@@ -152,7 +155,7 @@ class ClawPhysics {
 
     // 台主手法「卡洞預擺」：把特大隻的獎品先卡在洞口鐵桿上，看起來一碰就掉，其實根本擠不過去
     // (只能靠「卡洞自取」付費買走)
-    if (this.tricks.jam) {
+    if (this.tricks.jam && this.machineMode === 'avalanche') {
       const jamId = Math.random() < 0.5 ? 'watermelon' : 'fb_hero';
       const type = PRIZE_TYPES.find(t => t.id === jamId);
       const doll = this.createDoll(type, this.chute.x + this.chute.width / 2, 250, 0.95, 1.5);
