@@ -45,7 +45,7 @@ window.Claw3D = class {
     const sign=new T.Mesh(new T.PlaneGeometry(420,160),new T.MeshBasicMaterial({map:new T.CanvasTexture(board)}));
     sign.position.set(0,260,-198);this.scene.add(sign);this.modeSign=sign;
     for(const x of [-280,280])this.box(x,205,-192,8,320,8,new T.MeshBasicMaterial({color:0xfff1bb}));
-    this.box(0,394,0,580,6,380,'#f7f6ef');
+    this.roof = this.box(0,394,0,580,6,380,'#f7f6ef');
     this.box(-300,200,0,10,400,410,'#d5d8dc');
     this.box(300,200,0,10,400,410,'#d5d8dc');
     this.box(-185,-45,165,110,80,80,'#242337');
@@ -90,8 +90,13 @@ window.Claw3D = class {
     this.modeSign.material.map.dispose();this.modeSign.material.map=new THREE.CanvasTexture(canvas);this.modeSign.material.needsUpdate=true;
   }
   setView(view) {
-    const positions={front:[0,200,940],side:[720,330,530],top:[0,950,220]};
-    this.camera.position.set(...positions[view]); this.camera.lookAt(0,view === 'front' ? 200 : 175,0);
+    const positions={front:[0,200,940],side:[720,330,530],top:[0,950,0]};
+    if (!positions[view]) return;
+    this.roof.visible = view !== 'top';
+    // A vertical camera needs an explicit up axis; rear stays at the top of the image.
+    this.camera.up.set(0, view === 'top' ? 0 : 1, view === 'top' ? -1 : 0);
+    this.camera.position.set(...positions[view]);
+    this.camera.lookAt(0,view === 'front' ? 200 : view === 'top' ? 0 : 175,0);
   }
   resize() {
     const rect=this.physics.canvas.parentElement.getBoundingClientRect();
