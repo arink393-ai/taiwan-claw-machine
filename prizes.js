@@ -924,7 +924,22 @@
     return list[Math.floor(Math.random() * list.length)];
   }
 
+  // 商城機台：把該機台的商品登記成機台裡的獎品 (約 10% 的獎品是這個商品)
+  function makeProductType(m) {
+    const a = m.art || { icon: '🎁', color: '#e5301f', label: '商品' };
+    const type = {
+      id: 'prod_' + m.id, cat: 'product', name: m.product.name, rarity: 'SR',
+      radius: 31, weight: 1.0, catchDifficulty: 0.5, catchRadius: 35, spawn: 0, product: true,
+      perk: '本店商品・夾中可兌換寄送',
+      draw: (c, r) => drawPackage(c, r, { color: a.color, icon: a.icon, label: a.label, sub: '本店商品' })
+    };
+    PRIZE_TYPES.push(type);
+    window.PRODUCT_TYPE = type;
+    return type;
+  }
+
   function pickPrizeType() {
+    if (window.PRODUCT_TYPE && Math.random() < 0.1) return window.PRODUCT_TYPE;
     const total = PRIZE_TYPES.reduce((s, t) => s + t.spawn, 0);
     let roll = Math.random() * total;
     for (const t of PRIZE_TYPES) {
@@ -993,6 +1008,7 @@
   window.RARITY = RARITY;
   window.CATEGORY_LABEL = CATEGORY_LABEL;
   window.pickPrizeType = pickPrizeType;
+  window.makeProductType = makeProductType;
   window.rollBlindBox = rollBlindBox;
   window.getCollectible = getCollectible;
   window.getPrizeBitmap = getBitmap;

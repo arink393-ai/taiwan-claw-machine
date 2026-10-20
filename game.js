@@ -69,6 +69,37 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) { /* 儲存失敗不影響遊戲 */ }
   }
 
+  // -------------------------------------------------------------
+  // 商城機台：從商城點進來 (play.html?m=<id>) 時，這台機台有自己的商品、費用與免費次數
+  // -------------------------------------------------------------
+  const MACHINE = window.CLAW_MACHINE || null;
+  const IS_FREE = !!(MACHINE && MACHINE.type === 'free');
+  if (MACHINE) state.guaranteePrice = IS_FREE ? 99999 : MACHINE.guarantee;
+
+  function lsGet(key, fallback) {
+    try { const v = localStorage.getItem(key); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; }
+  }
+  function lsSet(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* 忽略 */ }
+  }
+
+  const todayStr = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD (本地時間)
+  const freeKey = () => `claw-free-${MACHINE.id}-${todayStr()}`;
+  const freeLeft = () => MACHINE ? Math.max(0, MACHINE.freePlays - lsGet(freeKey(), 0)) : 0;
+
+  function bumpPlays() {
+    if (MACHINE) lsSet(`claw-plays-${MACHINE.id}`, lsGet(`claw-plays-${MACHINE.id}`, 0) + 1);
+  }
+
+  // 我的獎品：夾中的本店商品 (試玩模式存在瀏覽器；正式版改存資料庫)
+  const MY_PRIZES_KEY = 'claw-my-prizes';
+  const getMyPrizes = () => lsGet(MY_PRIZES_KEY, []);
+  function addMyPrize(m) {
+    const list = getMyPrizes();
+    list.unshift({ machineId: m.id, name: m.product.name, icon: m.art.icon, color: m.art.color, ts: Date.now(), status: '待領取（試玩）' });
+    lsSet(MY_PRIZES_KEY, list.slice(0, 100));
+  }
+
   loadSave();
 
   // 輸入狀態
@@ -136,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 更新儀表板顯示
   function updateDisplays() {
     elDispCredits.textContent = String(state.credits).padStart(2, '0');
-    elDispGuarantee.textContent = String(state.guaranteePrice).padStart(3, '0');
+    elDispGuarantee.textContent = state.guaranteePrice >= 99999 ? '---' : String(state.guaranteePrice).padStart(3, '0');
     elDispAccumulated.textContent = String(state.accumulatedPrice).padStart(3, '0');
     
     if (state.mode === 'PLAYING') {
@@ -173,6 +204,8 @@ document.addEventListener('DOMContentLoaded', () => {
       : '0.0';
     elStatWinRate.textContent = `${rate}%`;
 
+    refreshMachineUI();
+
     // 兌換券與夾出登記板
     elTicketCount.textContent = state.tickets;
     elStatBeat.textContent = state.beat;
@@ -184,8 +217,37 @@ document.addEventListener('DOMContentLoaded', () => {
     elCollectionBadge.textContent = totalCollected;
   }
 
+  // 商城機台資訊列、投幣按鈕文字、我的獎品徽章
+  function refreshMachineUI() {
+    const badge = document.getElementById('myprizes-badge');
+    if (badge) badge.textContent = getMyPrizes().length;
+    if (!MACHINE) return;
+    const rule = IS_FREE
+      ? `每日免費 ${MACHINE.freePlays} 次・今日剩 ${freeLeft()} 次`
+      : `每次 NT$${MACHINE.pricePerPlay}・保證取物 NT$${MACHINE.guarantee}`;
+    document.getElementById('mb-rule').textContent = rule;
+    elBtnCoin.innerHTML = IS_FREE
+      ? `🎟 領取免費次數 <span class="hotkey">(剩 ${freeLeft()})</span>`
+      : elBtnCoin.innerHTML;
+    elBtnCoin100.style.display = IS_FREE ? 'none' : '';
+  }
+
   // 投幣處理
   function insertCoin(amount = 10) {
+    // 免費機台：用每日免費次數，不收幣、不累積保夾
+    if (IS_FREE) {
+      if (freeLeft() <= 0) {
+        elActionText.textContent = '今日免費次數已用完，明天再來！';
+        return;
+      }
+      lsSet(freeKey(), lsGet(freeKey(), 0) + 1);
+      window.clawAudio.playCoin();
+      state.credits += 1;
+      updateDisplays();
+      if (state.mode === 'IDLE') startNextRound();
+      return;
+    }
+
     window.clawAudio.playCoin();
     state.totalCoinsInserted += amount;
     state.credits += Math.floor(amount / 10);
@@ -236,6 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     state.credits--;
     state.beat++;
+    bumpPlays();
     physics.beatMod = computeBeatMod();
     saveGame();
     state.mode = 'PLAYING';
@@ -323,6 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!prizeType.blind) {
       state.collection[prizeType.id] = (state.collection[prizeType.id] || 0) + 1;
     }
+    if (prizeType.product && MACHINE) addMyPrize(MACHINE);
     state.lastWinBeat = state.beat;
     state.winBeats = [...state.winBeats, state.beat].slice(-6);
     const gain = TICKET_BY_RARITY[prizeType.rarity] || 1;
@@ -344,11 +408,13 @@ document.addEventListener('DOMContentLoaded', () => {
   function showWinCard(prizeType, wasGuaranteed) {
     state.winOpen = true;
     elWinCard.classList.remove('revealed', 'shaking');
-    elWinTitle.textContent = prizeType.blind ? '夾到盲盒了！' : '恭喜出貨！';
+    elWinTitle.textContent = prizeType.product ? '🎁 夾中本店商品！' : prizeType.blind ? '夾到盲盒了！' : '恭喜出貨！';
     elWinPreview.innerHTML = `<img src="${getPrizeSprite(prizeType.id, 140)}" alt="${prizeType.name}">`;
     elWinPrizeName.textContent = prizeType.name;
     elWinRarity.innerHTML = rarityBadgeHTML(prizeType.rarity) + `<span class="size-chip">${state.pendingSize}尺寸</span>`;
-    elWinDesc.textContent = prizeType.blind ? '到底會開出什麼呢？快拆開看看！' : prizeType.perk;
+    elWinDesc.textContent = prizeType.product
+      ? '已記入「我的獎品」。目前為試玩模式，尚未開通真實出貨。'
+      : prizeType.blind ? '到底會開出什麼呢？快拆開看看！' : prizeType.perk;
     elWinSpent.textContent = `累計投幣: ${state.totalCoinsInserted} 元`;
     elWinTag.textContent = (wasGuaranteed ? '👑 保夾出貨' : '🎯 技術取物') + `　🎫 +${state.pendingGain}`;
     elWinTag.style.background = wasGuaranteed ? '#ffd54a' : '#7be0c3';
@@ -1229,6 +1295,54 @@ document.addEventListener('DOMContentLoaded', () => {
   // 開始前先畫一張「空白卡」(黑點不能刮)
   renderCard({ wins: [{ num: 7, reward: { text: '加送 3 局' } }, { num: 23, reward: { text: '大獎' } }], dotNums: [...Array(DOT_COUNT).keys()].map(i => i + 1) });
   scratch.dots = [];
+
+  // -------------------------------------------------------------
+  // 我的獎品視窗
+  // -------------------------------------------------------------
+  const modalMyPrizes = document.getElementById('modal-myprizes');
+  const myPrizesList = document.getElementById('myprizes-list');
+
+  function renderMyPrizes() {
+    const list = getMyPrizes();
+    myPrizesList.innerHTML = '';
+    if (!list.length) {
+      myPrizesList.innerHTML = '<div class="empty-hint">還沒有夾中商品，去商城挑一台挑戰吧！</div>';
+      return;
+    }
+    list.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'myprize-row';
+      const icon = document.createElement('span');
+      icon.className = 'myprize-icon';
+      icon.style.background = p.color;
+      icon.textContent = p.icon;
+      const info = document.createElement('div');
+      const name = document.createElement('b');
+      name.textContent = p.name;
+      const meta = document.createElement('small');
+      meta.textContent = `${new Date(p.ts).toLocaleString('zh-TW')}・${p.status}`;
+      info.append(name, meta);
+      row.append(icon, info);
+      myPrizesList.appendChild(row);
+    });
+  }
+
+  document.getElementById('btn-myprizes').addEventListener('click', () => {
+    window.clawAudio.playClick();
+    renderMyPrizes();
+    modalMyPrizes.classList.remove('hidden');
+  });
+  document.getElementById('btn-close-myprizes').addEventListener('click', () => modalMyPrizes.classList.add('hidden'));
+  document.getElementById('btn-myprizes-close2').addEventListener('click', () => modalMyPrizes.classList.add('hidden'));
+
+  // 商城機台資訊列
+  if (MACHINE) {
+    const banner = document.getElementById('machine-banner');
+    banner.classList.remove('hidden');
+    document.getElementById('mb-tag').textContent = IS_FREE ? '免費機台' : '付費機台';
+    document.getElementById('mb-name').textContent = `${MACHINE.name}　獎品：${MACHINE.product.name}`;
+    document.querySelector('.arcade-title h1').textContent = `🏬 ${MACHINE.name}`;
+  }
 
   // -------------------------------------------------------------
   // 本機獎品跑馬展示條 + 背景漂浮裝飾

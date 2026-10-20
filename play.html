@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>飛絡力 夾娃娃機 (Fei Lou Li Claw Machine)</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Changa+One&family=Noto+Sans+TC:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="arcade-room">
+    <!-- 背景裝飾與霓虹夜市氛圍 -->
+    <div class="ambient-lights">
+      <div class="ambient-glow left"></div>
+      <div class="ambient-glow right"></div>
+    </div>
+
+    <!-- 頂部快速工具列 -->
+    <header class="top-bar">
+      <div class="arcade-title">
+        <span class="badge">TAIWAN · 山崩台</span>
+        <h1>🧸 飛絡力 FEILUOLI 夾娃娃機</h1>
+      </div>
+      <div class="top-actions">
+        <a class="tool-btn" href="index.html" title="回到商城首頁">🏬 商城</a>
+        <button id="btn-myprizes" class="tool-btn" title="我的獎品 (夾中的商品)">🎁 我的獎品 <span id="myprizes-badge" class="badge-count">0</span></button>
+        <button id="btn-collection" class="tool-btn" title="查看夾到的戰利品">
+          🎒 戰利品背包 <span id="collection-badge" class="badge-count">0</span>
+        </button>
+        <button id="btn-owner-mode" class="tool-btn warning" title="打開台主微調後台">
+          🔑 台主機板設定
+        </button>
+        <button id="btn-help" class="tool-btn" title="操作說明與夾娃秘技">
+          ❓ 夾娃秘笈
+        </button>
+        <button id="btn-sound-toggle" class="tool-btn icon-only" title="聲音開關">
+          🔊
+        </button>
+      </div>
+    </header>
+
+    <!-- 商城機台資訊列 (從商城進入時顯示) -->
+    <div class="machine-banner hidden" id="machine-banner">
+      <div class="mb-main">
+        <span class="mb-tag" id="mb-tag">付費機台</span>
+        <b id="mb-name"></b>
+        <span id="mb-rule"></span>
+      </div>
+      <div class="mb-note">試玩模式：使用試玩幣，尚未開通真實收款與出貨</div>
+    </div>
+
+    <!-- 夾娃娃機台本體 (經典飛絡力亮黃色機殼) -->
+    <main class="machine-wrapper">
+      <!-- 機頂擺設：夾換品、刮刮樂、夾出登記板、牛皮紙袋 (實機常見) -->
+      <div class="machine-topper" id="machine-topper">
+        <div class="clipboard" id="clipboard" title="夾出登記板">
+          <div class="clip-top"></div>
+          <div class="clip-title">夾出一個<br>登記一次</div>
+          <div class="clip-tally" id="clip-tally">—</div>
+          <div class="clip-beats" id="clip-beats">出貨拍 —</div>
+        </div>
+        <button class="topper-shelf" id="topper-shelf" title="夾換區：用兌換券換限定品">
+          <div class="shelf-items" id="shelf-items"></div>
+          <div class="shelf-sign">機頂夾換展示 · 🎫<b id="ticket-count">0</b> 券</div>
+        </button>
+        <button class="scratch-rack" id="scratch-rack" title="刮刮樂：3 張兌換券 1 張">
+          <span class="scratch-card c1"><i>幸運刮刮樂</i></span>
+          <span class="scratch-card c2"><i>幸運刮刮樂</i></span>
+          <span class="scratch-card c3"><i>幸運刮刮樂</i></span>
+          <span class="rack-sign">刮刮樂 3 券</span><span class="scratch-top-label">遊戲集券抽好禮</span>
+        </button>
+        <div class="kraft-bag"><span>S</span></div>
+      </div>
+
+      <div class="claw-machine feiluoli-cabinet">
+        
+        <!-- 頂部招牌燈箱 (Marquee) -->
+        <div class="machine-marquee">
+          <div class="led-strip top">
+            <span class="led"></span><span class="led"></span><span class="led"></span>
+            <span class="led"></span><span class="led"></span><span class="led"></span>
+            <span class="led"></span><span class="led"></span><span class="led"></span>
+            <span class="led"></span><span class="led"></span><span class="led"></span>
+          </div>
+          <div class="marquee-sign">
+            <div class="logo-wrap">
+              <span class="brand-chinese">選物販賣機<em>2代</em></span>
+              <span class="brand-english">飛絡力 FEI LOU LI</span>
+            </div>
+            <div class="marquee-subtitle">
+              <span class="pill-guarantee" id="marquee-guarantee-pill">保證取物</span>
+            </div>
+          </div>
+          <div class="led-strip bottom">
+            <span class="led"></span><span class="led"></span><span class="led"></span>
+            <span class="led"></span><span class="led"></span><span class="led"></span>
+            <span class="led"></span><span class="led"></span><span class="led"></span>
+            <span class="led"></span><span class="led"></span><span class="led"></span>
+          </div>
+        </div>
+
+        <!-- 本機獎品跑馬展示條 (由 game.js 以獎品圖鑑填入) -->
+        <div class="prize-ticker" aria-label="本機獎品">
+          <div class="ticker-track" id="ticker-track"></div>
+        </div>
+
+        <!-- 機身中間：壓克力透明玻璃展示窗 (櫥窗區) -->
+        <div class="machine-showcase">
+          <!-- 櫥窗邊框與反射層 -->
+          <div class="glass-reflection-overlay"></div>
+          <div class="cabinet-pillar left">
+            <div class="pillar-label">合格認證 NO.88921</div>
+          </div>
+          <div class="cabinet-pillar right">
+            <div class="pillar-label">投幣十元 歡樂無限</div>
+          </div>
+
+          <!-- 頂部聚光燈與軌道裝飾 -->
+          <div class="ceiling-light"></div>
+
+          <!-- 遊戲核心畫布 (Canvas) -->
+          <canvas id="game-canvas" width="600" height="480"></canvas>
+
+          <!-- 洞口標示與壓克力擋板立牌 (左下角出貨口) -->
+          <div class="chute-marker-label">
+            <span>⬇ 出貨洞口 ⬇</span>
+          </div>
+
+          <button id="btn-take-stuck" class="take-stuck hidden">🔧 卡洞自取 · 2 局</button>
+
+          <!-- 成功出貨時的特效層 (Confetti & Win Toast) -->
+          <div id="win-overlay" class="win-overlay hidden">
+            <div class="win-card" id="win-card">
+              <div class="win-sparkles">✨ 🎉 ✨</div>
+              <h2 id="win-title" class="win-title">恭喜出貨！</h2>
+              <div class="win-prize-stage">
+                <div id="win-prize-preview" class="win-prize-preview"></div>
+              </div>
+              <div id="win-rarity" class="win-rarity"></div>
+              <p id="win-prize-name" class="win-prize-name">泰迪小熊</p>
+              <p id="win-prize-desc" class="win-prize-desc"></p>
+              <div class="win-stats">
+                <span id="win-spent">花費: 10 元</span>
+                <span id="win-guaranteed-tag" class="tag-badge">技術取物</span>
+              </div>
+              <div class="win-actions">
+                <button id="btn-open-blind" class="btn-primary pulse hidden">🎁 拆開盲盒</button>
+                <button id="btn-collect-prize" class="btn-primary pulse">放入背包</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 經典飛絡力：LED 數碼顯示排 (Digital Displays) -->
+        <div class="machine-dashboard">
+          <div class="meter-box">
+            <span class="meter-title">投幣 / 剩餘局數</span>
+            <div class="segment-display red" id="disp-credits">00</div>
+          </div>
+          <div class="meter-box">
+            <span class="meter-title">保夾金額</span>
+            <div class="segment-display green" id="disp-guarantee">300</div>
+          </div>
+          <div class="meter-box">
+            <span class="meter-title">目前累積金額</span>
+            <div class="segment-display yellow" id="disp-accumulated">000</div>
+          </div>
+          <div class="meter-box">
+            <span class="meter-title">操作倒數</span>
+            <div class="segment-display blue" id="disp-timer">--</div>
+          </div>
+        </div>
+
+        <!-- 斜切面控制台 (Control Deck) -->
+        <div class="machine-console">
+          <div class="console-plate">
+            <!-- 裝飾螺絲釘 -->
+            <span class="screw top-left"></span>
+            <span class="screw top-right"></span>
+            <span class="screw btm-left"></span>
+            <span class="screw btm-right"></span>
+
+            <!-- 控制台左側：經典八向搖桿 -->
+            <div class="control-section joystick-section">
+              <div class="control-label">方向搖桿 (可甩爪)</div>
+              <div class="joystick-base" id="joystick-base">
+                <div class="joystick-pad"></div>
+                <div class="joystick-crystal"></div>
+                <div class="joystick-stick" id="joystick-stick">
+                  <div class="joystick-ball" id="joystick-ball"></div>
+                </div>
+              </div>
+              <div class="joystick-hint">鍵盤: W A S D 或 方向鍵</div>
+            </div>
+
+            <!-- 控制台中央：機台指示燈與下爪狀態 -->
+            <div class="control-section status-section">
+              <div class="guarantee-lamp-box" id="guarantee-lamp-box">
+                <div class="guarantee-bulb" id="guarantee-bulb"></div>
+                <span class="guarantee-text">保夾狀態中</span>
+              </div>
+              <div class="voltage-chip" title="抓取電壓 / 搬運電壓 (台主可調整)">⚡ <span id="disp-voltage">26V / 16V</span></div>
+              <div class="action-status-text" id="action-status-text">
+                請先投入 10 元硬幣
+              </div>
+            </div>
+
+            <!-- 控制台右側：巨大下爪按鈕 (支援二停！) -->
+            <div class="control-section button-section">
+              <div class="control-label">下爪 / 二停</div>
+              <button id="btn-drop" class="arcade-big-button" disabled>
+                <span class="btn-cap">
+                  <span class="btn-text">下 爪</span>
+                  <span class="btn-subtext">按第2次為二停</span>
+                </span>
+              </button>
+              <div class="button-hint">鍵盤: [空白鍵 Space]</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 機身下半部：投幣孔與退幣口、左側取出門 -->
+        <div class="machine-lower">
+          <!-- 左側取物口 (Prize Chute Flap) -->
+          <div class="chute-exit-panel">
+            <div class="chute-flap" id="chute-flap">
+              <div class="flap-handle"></div>
+              <span class="flap-text">取 物 口</span>
+            </div>
+          </div>
+
+          <!-- 右側投幣機構 (Coin Mech) -->
+          <div class="coin-mechanism">
+            <div class="coin-slot-housing">
+              <div class="coin-slot-sign">投幣口 $10</div>
+              <div class="coin-slot-slit" id="coin-slot-slit" title="點擊投幣 10 元"></div>
+              <div class="coin-actions">
+                <button id="btn-insert-coin" class="coin-btn">
+                  🪙 投幣 10 元 <span class="hotkey">(C)</span>
+                </button>
+                <button id="btn-insert-100" class="coin-btn secondary">
+                  💵 投 100 (換10次)
+                </button>
+              </div>
+            </div>
+            <div class="coin-return-slot">
+              <span class="return-text">退幣口</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- 底部操作快捷鍵提示與統計資訊 -->
+    <footer class="bottom-stats">
+      <div class="stat-item">總投幣: <b id="stat-total-coins">0</b> 元</div>
+      <div class="stat-item">已夾出: <b id="stat-prizes-won">0</b> 隻</div>
+      <div class="stat-item">勝率: <b id="stat-win-rate">0.0%</b></div>
+      <div class="stat-item">拍數: <b id="stat-beat">0</b></div>
+      <div class="stat-item quick-keys">快捷鍵: <b>[WASD] 移動</b> <b>[空白鍵] 下爪/二停</b> <b>[C] 投幣</b> <b>[R] 快速補貨</b></div>
+    </footer>
+  </div>
+
+  <!-- 彈出視窗：我的獎品 -->
+  <div id="modal-myprizes" class="modal-backdrop hidden">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3>🎁 我的獎品</h3>
+        <button class="modal-close" id="btn-close-myprizes">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="ex-tip">夾中的本店商品會記在這裡。目前為試玩模式，正式開通後可在此申請寄送。</p>
+        <div id="myprizes-list" class="myprizes-list"></div>
+      </div>
+      <div class="modal-footer">
+        <span></span>
+        <button class="btn-secondary" id="btn-myprizes-close2">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 彈出視窗：夾換區 & 刮刮樂 -->
+  <div id="modal-exchange" class="modal-backdrop hidden">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3>🎫 夾換區 &amp; 刮刮樂</h3>
+        <button class="modal-close" id="btn-close-exchange">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="ex-tip">每夾出一個獎品就有兌換券：普通 1 張、稀有 2 張、超稀有 3 張、隱藏款 5 張。</p>
+        <div class="ex-tickets">目前兌換券 <b id="ex-ticket-count">0</b> 張</div>
+
+        <h4 class="ex-h">🎁 夾換限定品</h4>
+        <div id="exchange-grid" class="exchange-grid"></div>
+
+        <h4 class="ex-h">🎰 黑點刮刮卡 <small>（3 張券刮一張）</small></h4>
+        <div class="scratch-wrap">
+          <div class="dot-card" id="dot-card">
+            <div class="dc-title">夾夾樂 刮刮卡</div>
+            <div class="dc-head">中獎號碼 · 刮中就有獎</div>
+            <div class="dc-wins" id="dc-wins"></div>
+            <div class="dc-grid" id="dc-grid"></div>
+            <div class="dc-status" id="dc-status">按「刮一張」開始！</div>
+          </div>
+          <div class="scratch-actions">
+            <button class="btn-primary" id="btn-scratch-buy">🎫 刮一張 (3 券)</button>
+            <button class="btn-secondary" id="btn-scratch-all" disabled>全部刮開</button>
+          </div>
+          <small class="scratch-odds">用滑鼠／手指刮開黑色圓點，刮出的號碼和上方「中獎號碼」一樣就中獎！</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <span></span>
+        <button class="btn-secondary" id="btn-exchange-close2">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 彈出視窗 1: 戰利品背包 -->
+  <div id="modal-collection" class="modal-backdrop hidden">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3>🎒 我的夾娃娃戰利品展示櫃</h3>
+        <button class="modal-close" id="btn-close-collection">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="collection-grid" class="collection-grid">
+          <div class="empty-hint">目前還沒夾到娃娃，趕快投幣試試手氣吧！</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="collection-summary" id="collection-summary">共 0 件獎品</div>
+        <button class="btn-secondary" id="btn-modal-close-coll">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 彈出視窗 2: 台主微調後台 (DIP Switch / Owner Settings) -->
+  <div id="modal-owner" class="modal-backdrop hidden">
+    <div class="modal-window owner-modal">
+      <div class="modal-header">
+        <h3>🔑 飛絡力主機板 台主微調參數</h3>
+        <button class="modal-close" id="btn-close-owner">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="owner-form">
+          <div class="form-group">
+            <label for="set-guarantee">保證取物金額 (元):</label>
+            <div class="range-wrap">
+              <input type="range" id="set-guarantee" min="50" max="990" step="50" value="300">
+              <span id="val-guarantee" class="val-display">300 元</span>
+            </div>
+            <small>達到此金額前，爪子會有收爪放爪機率；達到後爪力鎖定 100% 強爪。</small>
+          </div>
+
+          <div class="form-group">
+            <label for="set-claw-power">抓取電壓 (V)：爪子夾住的力道</label>
+            <div class="range-wrap">
+              <input type="range" id="set-claw-power" min="8" max="32" step="1" value="26">
+              <span id="val-claw-power" class="val-display">26 V</span>
+            </div>
+            <small>跟真機台一樣，電壓越高爪子閉得越緊、越容易夾起；太低會夾了又滑開。</small>
+          </div>
+
+          <div class="form-group">
+            <label for="set-drop-power">搬運電壓 (V)：上升與移動途中的力道</label>
+            <div class="range-wrap">
+              <input type="range" id="set-drop-power" min="8" max="32" step="1" value="16">
+              <span id="val-drop-power" class="val-display">16 V</span>
+            </div>
+            <small>夾起後維持的力道。電壓低時爪子會鬆鬆的，重的獎品（公仔盒、西瓜）容易中途掉落；保夾時兩段都鎖在 32V。</small>
+          </div>
+
+          <div class="form-group">
+            <label for="set-baffle-height">洞口擋板高度:</label>
+            <div class="range-wrap">
+              <input type="range" id="set-baffle-height" min="15" max="90" step="5" value="45">
+              <span id="val-baffle-height" class="val-display">45 px (標準防甩板)</span>
+            </div>
+            <small>擋板越低越容易翻滾進洞；過高則考驗直接垂直送球。</small>
+          </div>
+
+          <div class="form-group">
+            <label for="set-rod-gap">洞口鐵桿間距 (縮口):</label>
+            <div class="range-wrap">
+              <input type="range" id="set-rod-gap" min="40" max="90" step="2" value="66">
+              <span id="val-rod-gap" class="val-display">66 mm</span>
+            </div>
+            <small>洞口裡的兩支鐵桿把出口縮小：間距越小，越大隻的娃娃越難擠過去（特大隻幾乎卡死），要靠甩爪把它扯進洞。</small>
+          </div>
+
+          <div class="form-group">
+            <label for="set-timer-sec">操作倒數時間 (秒):</label>
+            <div class="range-wrap">
+              <input type="range" id="set-timer-sec" min="10" max="30" step="1" value="20">
+              <span id="val-timer-sec" class="val-display">20 秒</span>
+            </div>
+          </div>
+
+          <div class="form-group tricks-group">
+            <label>🕵️ 台主黑科技</label>
+            <label class="check-row"><input type="checkbox" id="opt-beat" checked> 拍數強爪：只有特定拍數才有強爪，其餘拍偏弱</label>
+            <div class="range-wrap">
+              <input type="range" id="set-beat-period" min="3" max="15" step="1" value="7">
+              <span id="val-beat-period" class="val-display">每 7 拍</span>
+            </div>
+            <label class="check-row"><input type="checkbox" id="opt-cool" checked> 出貨後收水：剛出貨的 3 拍爪力特別弱</label>
+            <label class="check-row"><input type="checkbox" id="opt-jam" checked> 卡洞預擺：補貨時把特大獎品卡在洞口鐵桿上，要付費「卡洞自取」</label>
+            <small>強拍時抓取 +6V、搬運 +8V；一般拍各 −4V；收水期各 −8V。保夾時不受影響。登記板會記錄最近出貨的拍數，玩家可以用來算拍數。</small>
+          </div>
+
+          <div class="form-actions">
+            <button id="btn-refill-dolls" class="btn-primary">🧸 重新補滿娃娃 (山崩台鋪滿)</button>
+            <button id="btn-clear-dolls" class="btn-secondary">🧹 清空重排</button>
+            <button id="btn-reset-accumulated" class="btn-danger">💰 歸零目前累積金額</button>
+            <button id="btn-clear-save" class="btn-danger">🗑 清除戰利品與統計存檔</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" id="btn-save-owner">確認設定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 彈出視窗 3: 夾娃娃機秘技指南 -->
+  <div id="modal-help" class="modal-backdrop hidden">
+    <div class="modal-window help-modal">
+      <div class="modal-header">
+        <h3>❓ 台灣夾娃娃機 (飛絡力) 實戰技巧</h3>
+        <button class="modal-close" id="btn-close-help">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="help-section">
+          <h4>🎯 核心四大神技</h4>
+          <ul>
+            <li><b>1. 甩爪 (Swinging Claw)</b>：利用方向鍵或搖桿快速左右或前後搖晃，爪子會因慣性畫出拋物線擺盪，在爪子盪向洞口最高點時按下下爪——爪子會帶著當下的擺動速度，沿著甩動方向拋出一道弧線落下，把娃娃往洞口扯！</li>
+            <li><b>2. 二停技巧 (Double Tap Stop)</b>：按下下爪後，爪子向下墜落的過程中，<b>再次按下「下爪按鈕」</b>，爪子會立刻剎車停止下潛並提早閉合收爪！適合精準夾取娃娃的突起處（如耳朵、標籤、吸管），避免爪子戳到底翻倒娃娃。</li>
+            <li><b>3. 倒卡洞口 / 翻落法</b>：如果娃娃已經被堆在洞口擋板邊緣，夾住娃娃外側，上升時娃娃被拉扯翻滾即有機率彈過擋板掉入洞口！</li>
+            <li><b>4. 保夾保證取物</b>：當投入金額達到保證取物金額時，綠色保夾指示燈會大亮，此時爪力鎖定為最強 100% 絕對不放爪，直到成功夾出獎品為止！</li>
+          </ul>
+        </div>
+        <div class="help-section">
+          <h4>🧊 景深與前後移動</h4>
+          <p>機台有「前 / 後」兩個方向：用 <b>W / S</b>（或搖桿上下）移動爪子的景深。離爪子太遠（較淡、較小）的獎品<b>夾不到</b>，右側的粉紅指示條會顯示目前可夾的範圍。</p>
+        </div>
+        <div class="help-section">
+          <h4>📏 大小不一與洞口鐵桿</h4>
+          <p>同一種獎品有 <b>迷你 / 標準 / 大型 / 特大</b> 四種尺寸，越大隻越難夾牢。洞口有<b>兩支鐵桿</b>把出口縮小，太大隻的要擠過去，卡在桿子上時可以把它夾起來換個角度再放，或請台主把鐵桿間距調寬。</p>
+        </div>
+        <div class="help-section">
+          <h4>🕵️ 台主常見手法</h4>
+          <ul>
+            <li><b>拍數強爪</b>：台主會設定「每 N 拍才有一拍強爪」，其他拍都在放水——電壓偏低，夾起來也容易中途鬆掉。</li>
+            <li><b>出貨後收水</b>：剛出貨的下 3 拍爪力特別弱，這時連投多半是白花錢。</li>
+            <li><b>卡洞預擺</b>：特大獎品卡在洞口鐵桿上，看起來一碰就掉，其實擠不過去；要用「卡洞自取」付 2 局買走。</li>
+            <li><b>縮口與擋板</b>：鐵桿間距、擋板高度都能調，越大隻的獎品越難進洞。</li>
+            <li><b>保夾不是白送</b>：保夾金額一出貨就歸零；而且要累積到看板上的金額才啟動。</li>
+          </ul>
+        </div>
+        <div class="help-section">
+          <h4>🔢 算拍數 &amp; 實戰技巧</h4>
+          <ul>
+            <li><b>算拍數</b>：右下「拍數」是機台累計玩了幾拍，機頂登記板寫著最近出貨的拍數（例如 7·14·21）。看出貨間隔就知道台主設的週期，下一個強拍＝最近一次強拍＋週期。</li>
+            <li><b>看爪定強弱</b>：強拍時爪子閉合得特別緊（爪尖明顯收攏），弱拍時爪子鬆鬆的。先觀察別人這一拍的爪形，再決定要不要投。</li>
+            <li><b>弱拍別硬夾</b>：弱拍就拿來「推」——甩爪撥動獎品、把它推向洞口，留給強拍一次夾走。</li>
+            <li><b>強拍重點</b>：強拍才用二停夾高瘦盒的上緣、夾最重的獎品；強拍之後（剛出貨）不要連投。</li>
+            <li><b>甩爪方向</b>：爪子往哪邊盪，下爪就往哪邊飄；沒甩直上直下容易夾了就鬆。</li>
+            <li><b>先挑小隻</b>：迷你、標準尺寸好進洞；特大隻最好放著，先把它前面的東西清掉。</li>
+            <li><b>預算</b>：算好保夾金額，快到保夾前別換機台，累積才不會白費。</li>
+          </ul>
+        </div>
+        <div class="help-section">
+          <h4>🧹 清檯獎</h4>
+          <p>把檯面上的獎品<b>全部夾出洞口</b>就是清檯！可拿到<b>黃金盲盒大獎、兌換券 +30、加送 5 局</b>，機台會自動重新補貨。背牆的金色看板會顯示剩餘件數。</p>
+        </div>
+        <div class="help-section">
+          <h4>🎁 獎品種類</h4>
+          <ul>
+            <li><b>🧸 療癒娃娃 / 🍉 食物抱枕</b>：最常見，圓滾滾好夾；西瓜抱枕又大又滑。</li>
+            <li><b>📦 公仔盒</b>：高瘦盒、寬扁盒、方盒各種比例，有的包著收縮膜；盒子又重，要用二停夾邊角。</li>
+            <li><b>🎁 盲盒</b>：夾出後可「拆開盲盒」，抽中系列公仔，有機會開出<b>隱藏款</b>！金色盲盒必中稀有以上。</li>
+            <li><b>🥚 扭蛋球</b>：體積小又圓，容易滑落。</li>
+          </ul>
+        </div>
+        <div class="help-section">
+          <h4>⌨️ 操作鍵位</h4>
+          <p>• <b>移動</b>：W / A / S / D 或 方向鍵 (支援多向靈活搖晃甩爪)</p>
+          <p>• <b>下爪 & 二停</b>：空白鍵 (Space) 或 Enter 鍵</p>
+          <p>• <b>投幣</b>：鍵盤 C 鍵 (投幣 10 元)</p>
+          <p>• <b>重新鋪貨</b>：鍵盤 R 鍵</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" id="btn-close-help-confirm">我知道了，開始夾！</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 遊戲腳本加載 -->
+  <script src="audio.js"></script>
+  <script src="prizes.js"></script>
+  <script src="machines.js"></script>
+  <script src="machine-boot.js"></script>
+  <script src="physics.js"></script>
+  <script src="vendor/three.min.js"></script>
+  <script src="scene3d.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

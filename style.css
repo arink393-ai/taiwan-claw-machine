@@ -1513,3 +1513,30 @@ body {
 .shelf-items {height:122px;}
 .shelf-items .shelf-product img {height:90px;}
 @media(max-width:600px){.shelf-items{height:110px;}.shelf-items .shelf-product img{height:80px;}}
+
+
+/* 商城機台資訊列 / 我的獎品 */
+.top-actions a.tool-btn { text-decoration: none; }
+.machine-banner {
+  position: relative;
+  z-index: 10;
+  width: calc(100% - 20px);
+  max-width: 660px;
+  margin: -4px 0 12px;
+  background: linear-gradient(180deg, #fff7c9, #ffe27a);
+  border: 3px solid #fff;
+  border-radius: 18px;
+  padding: 8px 14px;
+  box-shadow: 0 4px 0 #d9a900, 0 10px 18px rgba(120, 70, 0, 0.2);
+  color: #5a3300;
+  font-size: 0.82rem;
+}
+.mb-main { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 800; }
+.mb-main b { font-size: 0.95rem; }
+.mb-tag { background: #e5301f; color: #fff; border-radius: 99px; padding: 1px 10px; font-size: 0.72rem; font-weight: 900; }
+.mb-note { margin-top: 3px; font-size: 0.7rem; font-weight: 700; color: #8a5a00; }
+
+.myprizes-list { display: flex; flex-direction: column; gap: 8px; }
+.myprize-row { display: flex; align-items: center; gap: 10px; background: #fff; border: 2px solid var(--line); border-radius: 14px; padding: 8px 10px; }
+.myprize-row small { display: block; color: var(--ink-soft); font-size: 0.7rem; margin-top: 2px; }
+.myprize-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex: none; }
