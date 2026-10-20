@@ -55,7 +55,7 @@ class ClawPhysics {
 
     // 台主手法：本拍的電壓加減值 (強拍 +、弱拍 -)，由 game.js 每局開始時設定
     this.beatMod = { grab: 0, carry: 0 };
-    this.tricks = { jam: true }; // 卡洞預擺
+    this.tricks = { jam: false }; // 卡洞預擺
 
     // 鋼索與爪子
     this.claw = {
@@ -93,6 +93,8 @@ class ClawPhysics {
     this.time = 0;
     this.lastDt = 0.016;
 
+    this.machineMode = 'avalanche';
+    try { const saved=localStorage.getItem('claw-machine-mode'); if(MACHINE_MODES[saved]) this.machineMode=saved; } catch (_) {}
     this.backdrop = this.buildBackdrop();
     this.initDolls();
   }
@@ -127,6 +129,8 @@ class ClawPhysics {
     this.settleTimer = 3;
     // 山堆剛鋪好、尚在垮落的幾秒內，掉進洞口的娃娃視為「滑出堆外」，放回山上而不算出貨
     this.graceTimer = 7;
+    const config=MACHINE_MODES[this.machineMode];
+    const pool=PRIZE_TYPES.filter(config.filter);
     const baffleX = this.chute.x + this.chute.width;
     const endX = this.bounds.maxX - 24;
 
@@ -137,11 +141,12 @@ class ClawPhysics {
       {d: .46, from: 78, to: endX, center: 290}
     ];
     for (const lane of lanes) {
-      for (let layer = 0; layer < 5; layer++) {
+      for (let layer = 0; layer < config.layers; layer++) {
         const inset = layer * 28;
-        for (let x = lane.from + inset; x <= lane.to - inset; x += 56) {
-          const type = pickPrizeType();
-          const scale = type.cat === 'snack' ? .9 + Math.random() * .25 : .78 + Math.random() * .25;
+        for (let x = lane.from + inset; x <= lane.to - inset; x += config.step) {
+          // 商城機台：約 10% 的獎品是這台機台的商品
+          const type = (window.PRODUCT_TYPE && Math.random() < 0.1) ? window.PRODUCT_TYPE : pool[Math.floor(Math.random()*pool.length)];
+          const scale = type.cat === 'snack' ? .9 + Math.random() * .25 : .86 + Math.random() * .34;
           const doll = this.createDoll(type,x+(Math.random()-.5)*12,382-layer*45,lane.d+(Math.random()-.5)*.035,scale);
           doll.rotation = (Math.random()-.5)*.7;
           this.dolls.push(doll);
@@ -149,9 +154,16 @@ class ClawPhysics {
       }
     }
 
+    // 商城機台：小檯面也至少放一件商品
+    if (window.PRODUCT_TYPE && this.dolls.length && !this.dolls.some(d => d.type === window.PRODUCT_TYPE)) {
+      const d = this.dolls[Math.floor(Math.random() * this.dolls.length)];
+      d.type = window.PRODUCT_TYPE;
+      d.radius = d.type.radius * d.scale;
+    }
+
     // 台主手法「卡洞預擺」：把特大隻的獎品先卡在洞口鐵桿上，看起來一碰就掉，其實根本擠不過去
     // (只能靠「卡洞自取」付費買走)
-    if (this.tricks.jam) {
+    if (this.tricks.jam && this.machineMode === 'avalanche') {
       const jamId = Math.random() < 0.5 ? 'watermelon' : 'fb_hero';
       const type = PRIZE_TYPES.find(t => t.id === jamId);
       const doll = this.createDoll(type, this.chute.x + this.chute.width / 2, 250, 0.95, 1.5);
@@ -293,7 +305,7 @@ class ClawPhysics {
     if (this.claw.holdingPrize) {
       const p = this.claw.holdingPrize;
       p.x = this.claw.x;
-      p.y = this.claw.y + p.radius * 0.6;
+      p.y = this.grabPoint().y + p.radius * 0.15;
       p.vx = (this.claw.angleVel * this.claw.cableLength) * 0.2;
       p.vy = 0;
       p.depth = this.gantry.depth;
@@ -367,7 +379,13 @@ class ClawPhysics {
             doll.vx -= 1.25 * vn * nx;
             doll.vy -= 1.25 * vn * ny;
           }
-          doll.rotVel += nx * 0.4;
+          // Resting overlap is not an impact: never add spin every frame.
+          if (vn < -20) doll.rotVel += nx * Math.min(1.2, -vn * .008);
+          if (Math.abs(doll.vx) < 8 && Math.abs(doll.vy) < 15) {
+            doll.rotVel *= Math.exp(-12 * dt);
+            if (Math.abs(doll.rotVel) < .03) doll.rotVel = 0;
+          }
+          doll.rotVel = Math.max(-2, Math.min(2, doll.rotVel));
         }
       }
 
@@ -480,16 +498,20 @@ class ClawPhysics {
     return 0.46 - 0.4 * this.carryPower;
   }
 
-  // 爪尖夾取點：爪子中心往下約 22px，視覺上就是三個爪尖圍起來的位置
+  // 爪尖夾取點：爪子中心往下約 60px，視覺上就是三個爪尖圍起來的位置
   grabPoint() {
-    return { x: this.claw.x, y: this.claw.y + 22 };
+    return { x: this.claw.x, y: this.claw.y + 60 };
   }
 
   // 爪子是否已碰到(插進)娃娃的上緣：下爪時用來判斷「到底」
   touchesDoll(doll) {
     if (!this.isInReach(doll)) return false;
     const g = this.grabPoint();
-    return Math.hypot(g.x - doll.x, g.y - doll.y) < doll.radius * 0.95;
+    return Math.hypot(g.x - doll.x, g.y - doll.y) < this.catchRange(doll);
+  }
+
+  catchRange(doll) {
+    return Math.max(doll.type.catchRadius * doll.scale, doll.radius * .95 + 10);
   }
 
   // 抓取檢測 (只能抓到景深範圍內的娃娃)
@@ -501,7 +523,7 @@ class ClawPhysics {
     for (const doll of this.dolls) {
       if (!this.isInReach(doll)) continue;
       const dist = Math.hypot(gp.x - doll.x, gp.y - doll.y);
-      if (dist < doll.type.catchRadius * doll.scale && dist < minDist) {
+      if (dist < this.catchRange(doll) && dist < minDist) {
         minDist = dist;
         closestDoll = doll;
       }
