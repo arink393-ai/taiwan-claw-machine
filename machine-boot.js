@@ -3,10 +3,21 @@
  * 沒有 ?m 就是一般娛樂模式 (沒有商品)。必須在 physics.js 之前載入 (補貨時就要抽得到商品)。
  */
 (function () {
-  const id = new URLSearchParams(location.search).get('m');
-  const machine = id ? (window.MACHINES || []).find(m => m.id === id) : null;
+  const id = new URLSearchParams(location.search).get("m");
+  const machine = id ? (window.MACHINES || []).find((m) => m.id === id) : null;
   window.CLAW_MACHINE = machine || null;
-  if (!machine) return;
+  if (!machine) {
+    if (id) {
+      document.addEventListener("DOMContentLoaded", () => {
+        const banner = document.getElementById("machine-banner");
+        banner.classList.remove("hidden");
+        document.getElementById("mb-name").textContent =
+          "找不到這台機台，已進入自由練習。";
+        document.getElementById("mb-tag").textContent = "自由練習";
+      });
+    }
+    return;
+  }
 
   document.title = `${machine.name}｜飛絡力商城`;
   window.makeProductType(machine);

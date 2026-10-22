@@ -17,7 +17,7 @@
  *   art        { icon, color, label }  商品圖示 (沒有商品照片時用)，label 最多 5 字
  *   image      (選填) 商品照片網址，有填就優先顯示
  */
-window.MALL_CATEGORIES = ['食物', '飲料', '泡麵', '生活用品', '美妝保養', '寵物用品', '玩具', '其他'];
+window.MALL_CATEGORIES = ['食物', '飲料', '泡麵', '生活用品', '美妝保養', '寵物用品', '玩具', '3C數位', '其他'];
 
 window.MACHINES = [
   { id: 'snack-chips', name: '海苔洋芋片大包', category: '食物', type: 'free', freePlays: 3, guarantee: 0, featured: true, addedAt: '2026-10-18',
@@ -29,7 +29,7 @@ window.MACHINES = [
   { id: 'noodle-beef', name: '紅燒牛肉麵', category: '泡麵', type: 'paid', pricePerPlay: 10, guarantee: 200, featured: true, addedAt: '2026-10-16',
     product: { name: '範例｜紅燒牛肉麵 5 入', desc: '台式經典泡麵。', price: 99, spec: '5 入' }, art: { icon: '🍜', color: '#cf473d', label: '牛肉麵' } },
   { id: 'noodle-free', name: '每日泡麵挑戰', category: '泡麵', type: 'free', freePlays: 5, guarantee: 0, addedAt: '2026-10-15',
-    product: { name: '範例｜迷你泡麵 1 碗', desc: '每日免費次數，夾中寄出。', price: 35, spec: '1 碗' }, art: { icon: '🍜', color: '#e8903a', label: '泡麵' } },
+    product: { name: '範例｜迷你泡麵 1 碗', desc: '每日免費挑戰，夾中留下收藏紀錄。', price: 35, spec: '1 碗' }, art: { icon: '🍜', color: '#e8903a', label: '泡麵' } },
   { id: 'life-tissue', name: '抽取式衛生紙', category: '生活用品', type: 'free', freePlays: 10, guarantee: 0, featured: true, addedAt: '2026-10-15',
     product: { name: '範例｜抽取式衛生紙 10 包', desc: '居家必備。', price: 89, spec: '10 包' }, art: { icon: '🧻', color: '#6fa8ff', label: '衛生紙' } },
   { id: 'life-detergent', name: '洗衣精補充包', category: '生活用品', type: 'paid', pricePerPlay: 10, guarantee: 400, addedAt: '2026-10-14',
@@ -52,4 +52,7 @@ window.MACHINES = [
     product: { name: '範例｜巧克力夾心餅分享包', desc: '下午茶好夥伴。', price: 69, spec: '1 包' }, art: { icon: '🍪', color: '#906047', label: '夾心餅' } },
   { id: 'other-gift', name: '神秘福袋', category: '其他', type: 'paid', pricePerPlay: 10, guarantee: 500, addedAt: '2026-10-10',
     product: { name: '範例｜神秘福袋', desc: '內容物依店家搭配。', price: 399, spec: '1 袋' }, art: { icon: '🎁', color: '#9b6bd8', label: '福袋' } }
-].map(m => ({ plays: 0, pricePerPlay: 10, freePlays: 0, ...m }));
+  ,{id:'tech-earbuds',name:'無線耳機專屬台',category:'3C數位',type:'paid',pricePerPlay:20,guarantee:600,featured:true,addedAt:'2026-10-22',product:{name:'範例｜真無線藍牙耳機',desc:'輕巧充電盒與無線耳機組，展示商品。',price:599,spec:'1 組'},art:{color:'#526c65',label:'無線耳機',icon:'🎧'}},
+  {id:'tech-speaker',name:'隨身音樂小劇場',category:'3C數位',type:'paid',pricePerPlay:20,guarantee:800,addedAt:'2026-10-22',product:{name:'範例｜便攜藍牙喇叭',desc:'掌心大小的便攜喇叭，展示商品。',price:799,spec:'1 台'},art:{color:'#bb9762',label:'藍牙喇叭',icon:'🔊'}},
+  {id:'figure-star',name:'星願公仔收藏台',category:'玩具',type:'paid',pricePerPlay:10,guarantee:500,featured:true,mode:'figure',addedAt:'2026-10-22',product:{name:'範例｜星願精靈公仔',desc:'盒裝收藏公仔，原創角色展示款。',price:399,spec:'1 盒'},art:{color:'#9883a5',label:'星願公仔',icon:'✦'}}
+].map(m => ({ plays: 0, pricePerPlay: 10, freePlays: 0, mode: m.category==='3C數位'?'tech':m.id==='toy-plush'?'plush':'avalanche', ...m }));

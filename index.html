@@ -1,141 +1,203 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-TW">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>飛絡力商城｜商品買賣與夾娃娃機台</title>
-  <meta name="description" content="挑一台機台，夾中就把商品帶回家。免費機台每日有免費次數。">
-  <link rel="stylesheet" href="mall.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Changa+One&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
-</head>
-<body>
-  <header class="mall-header">
-    <a class="brand" href="index.html">
-      <span class="brand-zh">飛絡力</span><span class="brand-en">FEI LOU LI</span>
-      <small>商品買賣・夾娃機台</small>
-    </a>
-    <nav class="mall-nav">
-      <a class="nav-btn active" href="index.html">商城</a>
-      <button class="nav-btn" id="btn-myprizes">我的獎品 <span class="nav-badge" id="myprizes-badge">0</span></button>
-      <a class="nav-btn" href="play.html" title="不挑商品，純娛樂模式">娛樂機台</a>
-      <button class="nav-btn ghost" disabled title="會員登入即將開放">玩家登入</button>
-    </nav>
-  </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>飛絡力商城｜商品買賣與夾娃娃機台</title>
+    <meta
+      name="description"
+      content="探索免費與試玩幣機台，收集生活好物與療癒娃娃。線上 3D 夾娃娃體驗，目前不提供真實收款與出貨。"
+    />
+    <link rel="stylesheet" href="design.css" />
+    <link rel="stylesheet" href="mall.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Changa+One&family=Noto+Sans+TC:wght@400;700;900&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <a class="skip-link" href="#machines">跳至機台列表</a>
+    <header class="mall-header">
+      <a class="brand" href="index.html" aria-label="飛絡力首頁"
+        ><span class="brand-mark" aria-hidden="true"></span
+        ><span class="brand-words"
+          ><strong>飛絡力</strong><small>FEILUOLI ARCADE</small></span
+        ></a
+      >
+      <nav class="mall-nav">
+        <a class="nav-btn active" href="index.html">探索機台</a>
+        <button class="nav-btn" id="btn-myprizes">
+          我的獎品 <span class="nav-badge" id="myprizes-badge">0</span>
+        </button>
+        <a class="nav-btn" href="play.html" title="不挑商品，純娛樂模式"
+          >自由練習</a
+        >
+        <span class="trial-label"><i></i> 試玩營運中</span>
+      </nav>
+    </header>
 
-  <div class="notice-bar" role="note">
-    <span>⚠ 遊玩前請先看清楚該機台的規則與保證取物金額；請理性消費，多玩免費機台。</span>
-  </div>
-
-  <main class="mall-main">
-    <!-- 主視覺 -->
-    <section class="hero">
-      <div class="hero-text">
-        <h1>機台遊戲</h1>
-        <p>選一台，開始挑戰。夾中就把商品帶回家！</p>
-        <div class="hero-actions">
-          <a class="btn-primary" href="#machines">探索機台 →</a>
-          <button class="btn-ghost" id="btn-free-only">免費機台・每日挑戰 →</button>
+    <main class="mall-main">
+      <section class="hero">
+        <div class="hero-text">
+          <span class="eyebrow">A LITTLE PLAY. A LITTLE JOY.</span>
+          <h1>把喜歡的日常，<br /><span>夾進生活裡。</span></h1>
+          <p>
+            從療癒娃娃到生活好物，<br />挑一台心動的機台，讓快樂離你近一點。
+          </p>
+          <div class="hero-actions">
+            <a class="btn-primary" href="#machines">探索機台 <span>↗</span></a
+            ><button class="btn-ghost" id="btn-free-only">
+              先玩免費機台 →
+            </button>
+          </div>
+          <div class="hero-caption">
+            <span class="tiny-dot"></span> 每日免費挑戰 <span>·</span> 3D
+            即時操作 <span>·</span> 收集你的戰利品
+          </div>
         </div>
-        <ul class="hero-points">
-          <li>🎟 免費機台：每日有免費次數</li>
-          <li>🛡 付費機台：有「保證取物」，累計投入達標必中</li>
-          <li>📦 夾中的商品記在「我的獎品」</li>
-        </ul>
+        <div class="hero-art">
+          <img
+            src="assets/arcade-hero.webp"
+            alt="黃色迷你娃娃機與毛絨娃娃的立體插畫"
+            width="640"
+            height="640"
+            fetchpriority="high"
+          /><span class="hero-sticker"
+            >HAVE A<br /><b>LUCKY DAY!</b><i>✳</i></span
+          >
+        </div>
+        <span class="hero-index">01 — THE JOY OF PLAY</span>
+      </section>
+      <section class="store-values" aria-label="遊玩資訊">
+        <div>
+          <span class="value-icon">↗</span>
+          <p><b>每天一點小幸運</b><small>免費機台，每日次數重新補充</small></p>
+        </div>
+        <div>
+          <span class="value-icon">◈</span>
+          <p>
+            <b>規則看清楚，再出手</b
+            ><small>每台費用、獎品與保夾資訊一目了然</small>
+          </p>
+        </div>
+        <div>
+          <span class="value-icon">▤</span>
+          <p>
+            <b>收藏每次的成就感</b><small>夾中商品，存進「我的獎品」</small>
+          </p>
+        </div>
+      </section>
+      <div class="trial-note">
+        <span>DEMO</span>目前使用試玩幣，商品為展示範例，不會實際收款或寄送。
       </div>
-      <div class="hero-art" aria-hidden="true">
-        <svg viewBox="0 0 300 260" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="gMetal" x1="0" x2="1"><stop offset="0" stop-color="#8b93a6"/><stop offset=".5" stop-color="#f4f6fa"/><stop offset="1" stop-color="#7e8594"/></linearGradient>
-            <linearGradient id="gBox" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe45c"/><stop offset="1" stop-color="#f0a800"/></linearGradient>
-          </defs>
-          <rect x="148" y="0" width="4" height="86" fill="#3a3f4a"/>
-          <rect x="132" y="80" width="36" height="26" rx="6" fill="url(#gMetal)" stroke="#3a3f4a" stroke-width="2"/>
-          <rect x="132" y="88" width="36" height="6" fill="#e5301f"/>
-          <path d="M138 104 Q108 112 112 160" stroke="#3a3f4a" stroke-width="7" fill="none" stroke-linecap="round"/>
-          <path d="M138 104 Q108 112 112 160" stroke="#d9dee8" stroke-width="4" fill="none" stroke-linecap="round"/>
-          <path d="M162 104 Q192 112 188 160" stroke="#3a3f4a" stroke-width="7" fill="none" stroke-linecap="round"/>
-          <path d="M162 104 Q192 112 188 160" stroke="#d9dee8" stroke-width="4" fill="none" stroke-linecap="round"/>
-          <path d="M150 104 L150 162" stroke="#3a3f4a" stroke-width="7" fill="none" stroke-linecap="round"/>
-          <path d="M150 104 L150 162" stroke="#aab1c0" stroke-width="4" fill="none" stroke-linecap="round"/>
-          <rect x="60" y="176" width="70" height="70" rx="10" fill="url(#gBox)" stroke="#fff" stroke-width="3"/>
-          <text x="95" y="224" font-size="40" text-anchor="middle">🧋</text>
-          <rect x="150" y="190" width="64" height="56" rx="10" fill="#ff8a7a" stroke="#fff" stroke-width="3"/>
-          <text x="182" y="230" font-size="34" text-anchor="middle">🧴</text>
-          <rect x="218" y="168" width="60" height="78" rx="10" fill="#6fa8ff" stroke="#fff" stroke-width="3"/>
-          <text x="248" y="220" font-size="34" text-anchor="middle">🧻</text>
-        </svg>
+      <section
+        id="continue-section"
+        class="continue-section hidden"
+        aria-label="繼續遊玩"
+      ></section>
+      <!-- 篩選列 -->
+      <section class="filters" id="machines">
+        <div class="browse-heading">
+          <div>
+            <span class="eyebrow">FIND YOUR NEXT FAVORITE</span>
+            <h2>今天，想夾點什麼？</h2>
+          </div>
+          <span id="catalog-total"></span>
+        </div>
+        <div class="tabs" id="type-tabs">
+          <button class="tab active" data-type="all">全部機台</button>
+          <button class="tab" data-type="free">每日免費</button>
+          <button class="tab" data-type="paid">試玩幣機台</button>
+        </div>
+        <div
+          class="category-chips"
+          id="category-chips"
+          aria-label="商品分類"
+        ></div>
+        <div class="filter-row">
+          <input
+            type="search"
+            id="search"
+            placeholder="搜尋機台或商品名稱"
+            aria-label="搜尋機台"
+          />
+          <select id="category" aria-label="分類">
+            <option value="all">全部分類</option>
+          </select>
+          <select id="sort" aria-label="排序">
+            <option value="hot">熱門精選</option>
+            <option value="new">最新上架</option>
+            <option value="price">參考市價：低到高</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="list-head">
+        <h2>機台一覽</h2>
+        <p id="result-count">載入中…</p>
+        <button
+          id="btn-favorites"
+          class="favorites-filter"
+          aria-pressed="false"
+        >
+          ♡ 只看收藏
+        </button>
+      </section>
+
+      <section class="grid" id="machine-grid" aria-live="polite"></section>
+
+      <nav class="pager" id="pager" aria-label="分頁"></nav>
+
+      <section class="about">
+        <h3>關於本店</h3>
+        <p>
+          選機台、看規則、練手感。每台對應一項展示商品，夾中後可在「我的獎品」查看紀錄。
+        </p>
+        <p class="about-note">
+          目前為體驗版本，紀錄儲存在這台裝置的瀏覽器；清除網站資料會一併移除紀錄。
+        </p>
+      </section>
+    </main>
+
+    <footer class="mall-footer">
+      <span>© 飛絡力商城</span>
+      <a href="play.html">自由練習</a>
+    </footer>
+
+    <!-- 機台詳情 -->
+    <div class="modal hidden" id="modal-detail" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <button class="modal-x" id="btn-close-detail" aria-label="關閉">
+          &times;
+        </button>
+        <div class="detail" id="detail-body"></div>
       </div>
-    </section>
-
-    <!-- 篩選列 -->
-    <section class="filters" id="machines">
-      <div class="tabs" id="type-tabs">
-        <button class="tab active" data-type="all">全部機台</button>
-        <button class="tab" data-type="free">🎟 免費機台</button>
-        <button class="tab" data-type="paid">🛡 付費機台</button>
-      </div>
-      <div class="filter-row">
-        <input type="search" id="search" placeholder="搜尋機台或商品名稱" aria-label="搜尋機台">
-        <select id="category" aria-label="分類"><option value="all">全部分類</option></select>
-        <select id="sort" aria-label="排序">
-          <option value="hot">熱門排行（遊玩最多）</option>
-          <option value="new">最新上架</option>
-          <option value="price">市價由低到高</option>
-        </select>
-      </div>
-    </section>
-
-    <section class="list-head">
-      <h2>可以玩的機台</h2>
-      <p id="result-count">載入中…</p>
-    </section>
-
-    <section class="grid" id="machine-grid" aria-live="polite"></section>
-
-    <nav class="pager" id="pager" aria-label="分頁"></nav>
-
-    <section class="about">
-      <h3>關於本店</h3>
-      <p>這裡是單一店家的商品商城：每台機台對應一項商品。夾中即可兌換，不另外購買。</p>
-      <p class="about-note">⚠ 目前為「試玩模式」：使用試玩幣，不會真的收款或出貨；正式開通前會公開收費、機率與保證取物規則。</p>
-    </section>
-  </main>
-
-  <footer class="mall-footer">
-    <span>© 飛絡力商城</span>
-    <a href="play.html">娛樂機台</a>
-  </footer>
-
-  <!-- 機台詳情 -->
-  <div class="modal hidden" id="modal-detail" role="dialog" aria-modal="true">
-    <div class="modal-card">
-      <button class="modal-x" id="btn-close-detail" aria-label="關閉">&times;</button>
-      <div class="detail" id="detail-body"></div>
     </div>
-  </div>
 
-  <!-- 我的獎品 -->
-  <div class="modal hidden" id="modal-myprizes" role="dialog" aria-modal="true">
-    <div class="modal-card">
-      <button class="modal-x" id="btn-close-myprizes" aria-label="關閉">&times;</button>
-      <h3>🎁 我的獎品</h3>
-      <p class="muted">夾中的本店商品會記在這裡。目前為試玩模式，正式開通後可在此申請寄送。</p>
-      <div id="myprizes-list" class="myprizes-list"></div>
+    <!-- 我的獎品 -->
+    <div
+      class="modal hidden"
+      id="modal-myprizes"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="modal-card">
+        <button class="modal-x" id="btn-close-myprizes" aria-label="關閉">
+          &times;
+        </button>
+        <h3>🎁 我的獎品</h3>
+        <p class="muted">
+          夾中的本店商品會記在這裡。目前為試玩模式，正式開通後可在此申請寄送。
+        </p>
+        <div id="myprizes-list" class="myprizes-list"></div>
+      </div>
     </div>
-  </div>
 
-  <!-- 遊玩提醒 -->
-  <div class="modal hidden" id="modal-notice" role="dialog" aria-modal="true">
-    <div class="modal-card small">
-      <h3>遊玩提醒</h3>
-      <p>請理性消費，多玩免費機台。</p>
-      <button class="btn-primary wide" id="btn-notice-ok">好</button>
-    </div>
-  </div>
-
-  <script src="machines.js"></script>
-  <script src="mall.js"></script>
-</body>
+    <script src="machines.js"></script>
+    <script src="catalog-art.js"></script>
+    <script src="mall.js"></script>
+    <script src="ui.js"></script>
+  </body>
 </html>

@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 遊戲全域狀態
   const state = {
+    activeRound: false,
     mode: 'IDLE', // IDLE, PLAYING, DESCENDING, GRABBING, ASCENDING, RETURNING, RELEASING
     credits: 0,
     guaranteePrice: 300,
@@ -57,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function saveGame() {
     try {
+      localStorage.setItem(SESSION_KEY,JSON.stringify({credits:state.credits,accumulatedPrice:state.accumulatedPrice,activeRound:state.activeRound}));
       localStorage.setItem(SAVE_KEY, JSON.stringify({
         collection: state.collection,
         totalCoinsInserted: state.totalCoinsInserted,
@@ -74,6 +76,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // -------------------------------------------------------------
   const MACHINE = window.CLAW_MACHINE || null;
   const IS_FREE = !!(MACHINE && MACHINE.type === 'free');
+  const PRICE_PER_PLAY = MACHINE ? MACHINE.pricePerPlay : 10;
+  const SESSION_KEY='claw-session-v1-'+(MACHINE?.id||'practice');
+  const openDialog=()=>!!document.querySelector('.modal-backdrop:not(.hidden)');
   if (MACHINE) state.guaranteePrice = IS_FREE ? 99999 : MACHINE.guarantee;
 
   function lsGet(key, fallback) {
@@ -83,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* 忽略 */ }
   }
 
-  const todayStr = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD (本地時間)
+  const todayStr = () => new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Taipei'}); // YYYY-MM-DD (本地時間)
   const freeKey = () => `claw-free-${MACHINE.id}-${todayStr()}`;
   const freeLeft = () => MACHINE ? Math.max(0, MACHINE.freePlays - lsGet(freeKey(), 0)) : 0;
 
@@ -101,6 +106,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   loadSave();
+  const session=lsGet(SESSION_KEY,null);
+  if(session){state.credits=Math.min(100,Math.max(0,Math.floor(Number(session.credits)||0)))+(session.activeRound?1:0);state.accumulatedPrice=Math.max(0,Number(session.accumulatedPrice)||0);}
+  if(MACHINE)lsSet('claw-last-machine',MACHINE.id);
 
   // 輸入狀態
   const input = {
@@ -133,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const elClipTally = document.getElementById('clip-tally');
   const elStatCoins = document.getElementById('stat-total-coins');
   const elStatWins = document.getElementById('stat-prizes-won');
-  const elStatWinRate = document.getElementById('stat-win-rate');
+  const elStatRounds = document.getElementById('stat-rounds');
   const elCollectionBadge = document.getElementById('collection-badge');
 
   // 獲勝覆蓋卡片
@@ -166,9 +174,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 更新儀表板顯示
   function updateDisplays() {
-    document.querySelectorAll('[data-machine-mode]').forEach(button=>button.disabled=state.mode!=='IDLE'||state.winOpen);
+    const focusStart=document.getElementById('focus-start');focusStart.disabled=state.mode!=='IDLE'||state.winOpen;
+    focusStart.textContent=state.mode!=='IDLE'?'遊戲進行中':IS_FREE?`免費挑戰 · 剩 ${freeLeft()}`:`開始一局 · ${PRICE_PER_PLAY} 幣`;
+    document.querySelectorAll('[data-machine-mode]').forEach(button=>button.disabled=!!MACHINE||state.mode!=='IDLE'||state.winOpen);
     const modeHint=document.getElementById('mode-hint');
-    if(modeHint)modeHint.textContent=state.mode==='IDLE'&&!state.winOpen ? '待機時可切換，切換後會重新補貨。' : '本局結束並領取獎品後，可切換機台。';
+    if(modeHint)modeHint.textContent=MACHINE?'商品專屬機台 · 內容配置固定；自由練習可切換其他模式。':state.mode==='IDLE'&&!state.winOpen ? '待機時可切換，切換後會重新補貨。' : '本局結束並領取獎品後，可切換機台。';
     elDispCredits.textContent = String(state.credits).padStart(2, '0');
     elDispGuarantee.textContent = state.guaranteePrice >= 99999 ? '---' : String(state.guaranteePrice).padStart(3, '0');
     elDispAccumulated.textContent = String(state.accumulatedPrice).padStart(3, '0');
@@ -202,12 +212,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // 統計
     elStatCoins.textContent = state.totalCoinsInserted;
     elStatWins.textContent = state.prizesWonCount;
-    const rate = state.totalCoinsInserted > 0 
-      ? ((state.prizesWonCount / (state.totalCoinsInserted / 10)) * 100).toFixed(1)
-      : '0.0';
-    elStatWinRate.textContent = `${rate}%`;
+    elStatRounds.textContent = state.beat;
 
     refreshMachineUI();
+    const progress=document.getElementById('session-progress');
+    progress.max=IS_FREE?MACHINE.freePlays:state.guaranteePrice;
+    progress.value=IS_FREE?MACHINE.freePlays-freeLeft():Math.min(state.guaranteePrice,state.accumulatedPrice);
+    document.getElementById('session-progress-text').textContent=IS_FREE?`${freeLeft()} / ${MACHINE.freePlays}`:`${state.accumulatedPrice} / ${state.guaranteePrice}`;
+
 
     // 兌換券與夾出登記板
     elTicketCount.textContent = state.tickets;
@@ -224,10 +236,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function refreshMachineUI() {
     const badge = document.getElementById('myprizes-badge');
     if (badge) badge.textContent = getMyPrizes().length;
+    elBtnCoin.textContent=IS_FREE?`領取免費次數 · 剩 ${freeLeft()}`:`投入 ${PRICE_PER_PLAY} 試玩幣` ;
+    elBtnCoin100.textContent=`儲值 ${PRICE_PER_PLAY*10} 試玩幣 · 10 局`;
     if (!MACHINE) return;
     const rule = IS_FREE
       ? `每日免費 ${MACHINE.freePlays} 次・今日剩 ${freeLeft()} 次`
-      : `每次 NT$${MACHINE.pricePerPlay}・保證取物 NT$${MACHINE.guarantee}`;
+      : `每次 ${PRICE_PER_PLAY} 試玩幣・強爪門檻 ${MACHINE.guarantee} 試玩幣`;
     document.getElementById('mb-rule').textContent = rule;
     elBtnCoin.innerHTML = IS_FREE
       ? `🎟 領取免費次數 <span class="hotkey">(剩 ${freeLeft()})</span>`
@@ -236,7 +250,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 投幣處理
-  function insertCoin(amount = 10) {
+  function insertCoin(amount = PRICE_PER_PLAY) {
+    if(state.winOpen||openDialog())return;
+    if(!Number.isFinite(amount)||amount<PRICE_PER_PLAY)return;
     // 免費機台：用每日免費次數，不收幣、不累積保夾
     if (IS_FREE) {
       if (freeLeft() <= 0) {
@@ -246,6 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
       lsSet(freeKey(), lsGet(freeKey(), 0) + 1);
       window.clawAudio.playCoin();
       state.credits += 1;
+      saveGame();
       updateDisplays();
       if (state.mode === 'IDLE') startNextRound();
       return;
@@ -253,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.clawAudio.playCoin();
     state.totalCoinsInserted += amount;
-    state.credits += Math.floor(amount / 10);
+    state.credits += Math.floor(amount / PRICE_PER_PLAY);
     state.accumulatedPrice += amount;
     saveGame();
 
@@ -290,8 +307,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // 開始新一局
   function startNextRound() {
     if (state.credits <= 0) {
+      state.activeRound=false;
       state.mode = 'IDLE';
-      elActionText.textContent = '請投入 10 元硬幣開始';
+      saveGame();
+      elActionText.textContent = IS_FREE ? (freeLeft()>0?'領取免費次數，開始挑戰':'今日免費次數已用完，明天再來！') : `投入 ${PRICE_PER_PLAY} 試玩幣開始`;
       elBtnDrop.disabled = true;
       const cap = elBtnDrop.querySelector('.btn-text');
       if (cap) cap.textContent = '下 爪';
@@ -300,6 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     state.credits--;
+    state.activeRound=true;
     state.beat++;
     bumpPlays();
     physics.beatMod = computeBeatMod();
@@ -308,6 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state.currentTimer = state.timerSeconds;
     state.isSecondStopAvailable = false;
     state.hasSecondStopped = false;
+    if(scene3d){scene3d.renderer.domElement.tabIndex=0;scene3d.renderer.domElement.focus({preventScroll:true});}
 
     // 天車重置至可移動狀態，爪子張開
     physics.claw.openRatio = 0.85;
@@ -323,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 觸發下爪或二停 (按下大圓鈕)
   function handleDropButton() {
-    if (state.winOpen) return;
+    if (state.winOpen||openDialog()) return;
     window.clawAudio.playClick();
 
     if (state.mode === 'PLAYING') {
@@ -376,6 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 獲勝出貨事件監聽
   physics.onPrizeWon = (prizeType, doll) => {
+    state.activeRound=false;
     state.pendingSize = doll ? ClawPhysics.sizeLabel(doll.scale) : '標準';
     state.prizesWonCount++;
 
@@ -524,17 +546,20 @@ document.addEventListener('DOMContentLoaded', () => {
   btnTakeStuck.addEventListener('click', () => {
     if (state.credits < TAKE_COST || state.winOpen) return;
     state.credits -= TAKE_COST;
-    state.totalCoinsInserted += TAKE_COST * 10;
+    // These credits were counted on deposit; do not charge them a second time.
+    saveGame();
     if (physics.takeStuck()) window.clawAudio.playCoin();
     updateDisplays();
   });
 
   // 主更新循環 (RequestAnimationFrame)
-  let lastTime = performance.now();
+  let lastTime = performance.now(),lastHudUpdate=0;
+  const aimHud=document.createElement('div');aimHud.className='aim-hud';document.querySelector('.machine-showcase').append(aimHud);
 
   function gameLoop(now) {
     const dt = Math.min((now - lastTime) / 1000, 0.1);
     lastTime = now;
+    if(document.hidden||openDialog()) {window.clawAudio.stopMotor();state.isMotorSoundPlaying=false;requestAnimationFrame(gameLoop);return;}
 
     // 1. 遊戲倒數計時
     if (state.mode === 'PLAYING' && !state.winOpen) {
@@ -642,6 +667,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
           state.releaseScheduled = false;
           if (state.mode === 'RELEASING') {
+            state.activeRound=false;
             startNextRound();
           }
         }, 800);
@@ -663,8 +689,9 @@ document.addEventListener('DOMContentLoaded', () => {
       state.isMotorSoundPlaying = false;
     }
 
+    if(now-lastHudUpdate>150){lastHudUpdate=now;const depth=physics.gantry.depth;aimHud.textContent=(depth>.8?'前排':depth>.57?'中排':'後排')+' · '+physics.dolls.length+' 件獎品';}
     // 4. 畫布繪製
-    if (scene3d) scene3d.render(); else physics.render();
+    if (scene3d && !scene3d.renderer.getContext().isContextLost()) scene3d.render(); else physics.render();
 
     requestAnimationFrame(gameLoop);
   }
@@ -682,9 +709,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 投幣按鈕
-  elBtnCoin.addEventListener('click', () => insertCoin(10));
-  elBtnCoin100.addEventListener('click', () => insertCoin(100));
-  elCoinSlit.addEventListener('click', () => insertCoin(10));
+  elBtnCoin.addEventListener('click', () => insertCoin(PRICE_PER_PLAY));
+  elBtnCoin100.addEventListener('click', () => insertCoin(PRICE_PER_PLAY*10));
+  elCoinSlit.addEventListener('click', () => insertCoin(PRICE_PER_PLAY));
 
   // 點擊取物門可查看背包
   elChuteFlap.addEventListener('click', () => {
@@ -695,7 +722,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // 鍵盤操作監聽
   window.addEventListener('keydown', (e) => {
     // 避免在輸入框打字時誤觸
-    if (e.target.tagName === 'INPUT') return;
+    if (e.target.matches('input,textarea,select,[contenteditable="true"]')||openDialog()) return;
+    if(e.target.matches('button,a')&&['Space','Enter'].includes(e.code))return;
+    if(e.repeat&&['Space','Enter','KeyC','KeyR'].includes(e.code))return;
+    if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.code))e.preventDefault();
 
     switch (e.code) {
       case 'KeyA':
@@ -726,10 +756,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         break;
       case 'KeyC':
-        insertCoin(10);
+        insertCoin(PRICE_PER_PLAY);
         break;
       case 'KeyR':
-        if (state.mode === 'PLAYING' || state.mode === 'IDLE') physics.initDolls();
+        if (!MACHINE && state.mode === 'IDLE') physics.initDolls();
         break;
     }
     updateJoystickVisual();
@@ -974,7 +1004,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   btnSaveOwner.addEventListener('click', () => {
-    state.guaranteePrice = parseInt(setGuarantee.value, 10);
+    if(!MACHINE)state.guaranteePrice = parseInt(setGuarantee.value, 10);
     physics.settings.grabVoltage = parseInt(setClawPower.value, 10);
     physics.settings.carryVoltage = parseInt(setDropPower.value, 10);
     physics.settings.baffleHeight = parseInt(setBaffleHeight.value, 10);
@@ -1346,7 +1376,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (MACHINE) {
     const banner = document.getElementById('machine-banner');
     banner.classList.remove('hidden');
-    document.getElementById('mb-tag').textContent = IS_FREE ? '免費機台' : '付費機台';
+    document.getElementById('btn-owner-mode').classList.add('hidden');
+    document.getElementById('mb-tag').textContent = IS_FREE ? '每日免費' : '試玩幣機台';
     document.getElementById('mb-name').textContent = `${MACHINE.name}　獎品：${MACHINE.product.name}`;
     document.querySelector('.arcade-title h1').textContent = `🏬 ${MACHINE.name}`;
   }
@@ -1357,10 +1388,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const tickerTrack = document.getElementById('ticker-track');
   function refreshMachineMode() {
     const config=MACHINE_MODES[physics.machineMode];
-    document.getElementById('mode-description').textContent=config.description;
+    document.getElementById('mode-description').textContent=MACHINE?MACHINE.product.name+' · '+config.name:config.description;
     document.querySelectorAll('[data-machine-mode]').forEach(button=>{const active=button.dataset.machineMode===physics.machineMode;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
     document.querySelector('.badge').textContent='TAIWAN · '+config.name;
-    const tickerHTML=PRIZE_TYPES.filter(config.filter).map(t=>`<div class="ticker-item" style="--rc:${RARITY[t.rarity].color}" title="${t.name}"><img src="${getPrizeSprite(t.id,56)}" alt="${t.name}"><span>${t.name}</span></div>`).join('');
+    const tickerHTML=(MACHINE?[window.PRODUCT_TYPE,...PRIZE_TYPES.filter(config.filter)]:PRIZE_TYPES.filter(config.filter)).map(t=>`<div class="ticker-item" style="--rc:${RARITY[t.rarity].color}" title="${t.name}"><img src="${getPrizeSprite(t.id,56)}" alt="${t.name}"><span>${t.name}</span></div>`).join('');
     tickerTrack.innerHTML=tickerHTML+tickerHTML;
     if(scene3d)scene3d.setMachineMode(physics.machineMode);
   }
@@ -1368,7 +1399,7 @@ document.addEventListener('DOMContentLoaded', () => {
   for(const [key,config] of Object.entries(MACHINE_MODES)) {
     const button=document.createElement('button');button.type='button';button.dataset.machineMode=key;button.textContent=config.icon+' '+config.name;
     button.addEventListener('click',()=>{
-      if(state.mode!=='IDLE'||state.winOpen||key===physics.machineMode)return;
+      if(MACHINE||state.mode!=='IDLE'||state.winOpen||key===physics.machineMode)return;
       physics.machineMode=key;physics.initDolls();
       try{localStorage.setItem('claw-machine-mode',key);}catch(_){}
       refreshMachineMode();updateDisplays();
@@ -1392,6 +1423,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // 開發除錯用：在 console 可用 clawDebug.physics / clawDebug.state 檢查機台
   window.clawDebug = { physics, state };
 
+  document.getElementById('focus-start').addEventListener('click',()=>insertCoin(PRICE_PER_PLAY));
+  const focusButton=document.getElementById('btn-focus');
+  focusButton.addEventListener('click',()=>{const on=document.body.classList.toggle('play-focus');focusButton.setAttribute('aria-pressed',String(on));focusButton.textContent=on?'⛶ 返回完整畫面':'⛶ 集中操作';window.scrollTo(0,0);});
+  window.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('play-focus'))focusButton.click();});
+  function clearInput(){input.left=input.right=input.up=input.down=false;input.joyX=input.joyY=0;handleJoyEnd();window.clawAudio.stopMotor();state.isMotorSoundPlaying=false;}
+  window.addEventListener('blur',clearInput);document.addEventListener('visibilitychange',()=>{lastTime=performance.now();if(document.hidden)clearInput();});
+  const sessionArt=document.getElementById('session-art');const image=document.createElement('img');image.alt=MACHINE?MACHINE.product.name:'迷你娃娃機插畫';image.src=MACHINE?CatalogArt.url(MACHINE):'assets/arcade-hero.webp';if(!MACHINE)image.className='free-art';sessionArt.append(image);
+  if(!MACHINE)document.getElementById('reward-hint').textContent='自由練習中的獎品收進戰利品背包，集券還能換機頂限定品。';
+  if(MACHINE){document.getElementById('session-title').textContent=MACHINE.name;document.getElementById('session-desc').textContent=MACHINE.product.desc;document.getElementById('session-kind').textContent=MACHINE.category+' · '+(IS_FREE?'每日免費':'試玩幣機台');}
+  document.getElementById('session-price-label').textContent=IS_FREE?'每日免費次數':'每局試玩幣';document.getElementById('session-price').textContent=IS_FREE?MACHINE.freePlays:PRICE_PER_PLAY;
+  if(IS_FREE){document.getElementById('session-progress').setAttribute('aria-label','今日免費次數使用進度');document.getElementById('session-progress-label').textContent='今日剩餘次數';document.getElementById('session-progress-note').textContent='每日台北時間 00:00 重新補充免費次數。';}
   // 初始化首次顯示
   updateDisplays();
+  if(state.credits>0)startNextRound();
 });

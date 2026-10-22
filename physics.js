@@ -95,6 +95,7 @@ class ClawPhysics {
 
     this.machineMode = 'avalanche';
     try { const saved=localStorage.getItem('claw-machine-mode'); if(MACHINE_MODES[saved]) this.machineMode=saved; } catch (_) {}
+    if(window.CLAW_MACHINE) this.machineMode=CLAW_MACHINE.mode||'avalanche';
     this.backdrop = this.buildBackdrop();
     this.initDolls();
   }

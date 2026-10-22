@@ -18,6 +18,7 @@
   };
 
   const CATEGORY_LABEL = {
+    product: '🎁 本台商品',
     electronics: '🎧 3C 商品',
     snack: '🍿 山崩零食',
     plush: '🧸 療癒娃娃',
@@ -940,10 +941,12 @@
     const type = {
       id: 'prod_' + m.id, cat: 'product', name: m.product.name, rarity: 'SR',
       radius: 31, weight: 1.0, catchDifficulty: 0.5, catchRadius: 35, spawn: 0, product: true,
-      perk: '本店商品・夾中可兌換寄送',
-      draw: (c, r) => drawPackage(c, r, { color: a.color, icon: a.icon, label: a.label, sub: '本店商品' })
+      perk: '展示商品・夾中記入我的獎品',
+      machine: m,
+      draw: (c, r) => { if(window.CatalogArt){c.save();c.scale(r/85,r/85);CatalogArt.draw(c,m);c.restore();}else drawPackage(c,r,{color:a.color,icon:a.icon,label:a.label,sub:'展示商品'}); }
     };
     PRIZE_TYPES.push(type);
+    COLLECTIBLES.push({id:type.id,cat:type.cat,name:type.name,rarity:type.rarity,perk:type.perk});
     window.PRODUCT_TYPE = type;
     return type;
   }

@@ -4,36 +4,46 @@ window.Claw3D = class {
     const T = THREE;
     this.physics = physics;
     this.scene = new T.Scene();
-    this.scene.background = new T.Color('#ece5fc');
+    this.scene.background = new T.Color('#eee9dc');
     this.camera = new T.PerspectiveCamera(43, 1.25, 1, 3000);
     this.renderer = new T.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    this.renderer.outputColorSpace=T.SRGBColorSpace;
+    this.renderer.toneMapping=T.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure=.88;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = T.PCFSoftShadowMap;
     this.renderer.domElement.id = 'scene-3d';
     physics.canvas.after(this.renderer.domElement);
-    this.scene.add(new T.HemisphereLight(0xffffff, 0x8c6bb3, 2));
-    const light = new T.DirectionalLight(0xfff4dd, 3);
+    this.scene.add(new T.HemisphereLight(0xffffff, 0x879779, 1.1));
+    const light = new T.DirectionalLight(0xfff4dd, 2.1);
     light.position.set(120, 550, 300); light.castShadow = true;
     light.shadow.camera.left = -400; light.shadow.camera.right = 400;
     light.shadow.camera.top = 500; light.shadow.camera.bottom = -400;
-    light.shadow.mapSize.set(1024, 1024); this.scene.add(light);
-    this.material = color => new T.MeshStandardMaterial({ color, roughness: .65 });
+    light.shadow.mapSize.set(1024, 1024);light.shadow.bias=-.0004;light.shadow.normalBias=.4;this.scene.add(light);
+    const rim=new T.DirectionalLight(0xddebd6,.9);rim.position.set(-250,200,-100);this.scene.add(rim);
+    const environment=new T.Scene();environment.background=new T.Color('#8a9182');
+    const softbox=new T.Mesh(new T.PlaneGeometry(12,12),new T.MeshBasicMaterial({color:0xcbd1be}));softbox.position.set(0,5,-5);softbox.lookAt(0,0,0);environment.add(softbox);
+    const pmrem=new T.PMREMGenerator(this.renderer);this.scene.environment=pmrem.fromScene(environment).texture;pmrem.dispose();softbox.geometry.dispose();softbox.material.dispose();
+    this.materialCache=new Map();this.furCache=new Map();this.sharedMaterials=new Set();
+    this.sphereGeometry=new T.SphereGeometry(1,20,14);
+    this.material = color => {if(!this.materialCache.has(color)){const mat=new T.MeshStandardMaterial({color,roughness:.68});this.materialCache.set(color,mat);this.sharedMaterials.add(mat);}return this.materialCache.get(color);};
     this.metal = new T.MeshStandardMaterial({ color: 0xc9d7e5, metalness: .85, roughness: .24 });
+    this.sharedMaterials.add(this.metal);
     this.box = (x,y,z,w,h,d,color,parent=this.scene) => {
       const m = new T.Mesh(new T.BoxGeometry(w,h,d), typeof color === 'object' ? color : this.material(color));
       m.position.set(x,y,z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m;
     };
     this.ball = (parent,x,y,z,r,color,sx=1,sy=1,sz=1) => {
-      const m = new T.Mesh(new T.SphereGeometry(r,20,14),this.material(color));
-      m.position.set(x,y,z); m.scale.set(sx,sy,sz); m.castShadow=true; parent.add(m); return m;
+      const m = new T.Mesh(this.sphereGeometry,this.material(color));
+      m.position.set(x,y,z); m.scale.set(r*sx,r*sy,r*sz); m.castShadow=true; parent.add(m); return m;
     };
     // Floor cells leave an actual open chute in the front left corner.
     for(let x=0;x<12;x++) for(let z=0;z<8;z++) {
       if(x>=1 && x<=2 && z>=6) continue;
       this.box(-275+x*50,-5,-175+z*50,50,10,50,(x+z)%2 ? '#d8b78c':'#ddc39e');
     }
-    this.box(0,200,-205,600,400,10,'#eae6ec');
+    this.box(0,200,-205,600,400,10,'#dfe5d8');
     // Retail-style backboard, stainless rails and warm interior strip lighting.
     const board=document.createElement('canvas');board.width=1024;board.height=512;
     const bc=board.getContext('2d');bc.fillStyle='#fff7dd';bc.fillRect(0,0,1024,512);
@@ -46,8 +56,8 @@ window.Claw3D = class {
     sign.position.set(0,260,-198);this.scene.add(sign);this.modeSign=sign;
     for(const x of [-280,280])this.box(x,205,-192,8,320,8,new T.MeshBasicMaterial({color:0xfff1bb}));
     this.roof = this.box(0,394,0,580,6,380,'#f7f6ef');
-    this.box(-300,200,0,10,400,410,'#d5d8dc');
-    this.box(300,200,0,10,400,410,'#d5d8dc');
+    this.box(-300,200,0,10,400,410,'#e2e4d8');
+    this.box(300,200,0,10,400,410,'#e2e4d8');
     this.box(-185,-45,165,110,80,80,'#242337');
     this.box(-128,22,155,8,45,100,new T.MeshStandardMaterial({color:0x8bcfea,transparent:true,opacity:.35}));
     this.box(0,370,-120,580,8,10,this.metal);
@@ -75,18 +85,21 @@ window.Claw3D = class {
     this.target.rotation.x=-Math.PI/2; this.target.position.y=1; this.scene.add(this.target);
     this.models = new Map(); this.setView('front');
     const controls=document.createElement('div'); controls.className='view-controls';
-    controls.innerHTML='<span>✦ REAL 3D</span><button data-view="front" class="active">正面</button><button data-view="side">側面</button><button data-view="top">俯視</button>';
+    controls.innerHTML='<span>3D VIEW</span><button data-view="front" class="active">正面</button><button data-view="side">側面</button><button data-view="top">俯視</button>';
     physics.canvas.parentElement.append(controls);
     controls.addEventListener('click',e=>{if(!e.target.dataset.view)return; this.setView(e.target.dataset.view); controls.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b===e.target));});
     this.resizeObserver=new ResizeObserver(()=>this.resize()); this.resizeObserver.observe(physics.canvas.parentElement);
     this.resize(); physics.canvas.style.display='none';
+    this.renderer.domElement.setAttribute('aria-label','3D 夾娃娃機台，使用搖桿或方向鍵移動、空白鍵下爪');
+    this.renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();physics.canvas.style.display='block';this.renderer.domElement.style.display='none';});
+    this.renderer.domElement.addEventListener('webglcontextrestored',()=>{physics.canvas.style.display='none';this.renderer.domElement.style.display='block';});
   }
   setMachineMode(key) {
     const config=MACHINE_MODES[key],canvas=document.createElement('canvas');canvas.width=1024;canvas.height=512;
-    const c=canvas.getContext('2d');c.fillStyle=key==='tech'?'#e7edf4':key==='figure'?'#f3e9f5':'#fff7dd';c.fillRect(0,0,1024,512);
-    c.strokeStyle='#c4a24f';c.lineWidth=14;c.strokeRect(12,12,1000,488);c.textAlign='center';c.fillStyle='#8c3d36';c.font='900 100px sans-serif';c.fillText(config.name,512,160);
+    const c=canvas.getContext('2d');c.fillStyle='#f2efdd';c.fillRect(0,0,1024,512);
+    c.strokeStyle='#b7bb94';c.lineWidth=14;c.strokeRect(12,12,1000,488);c.textAlign='center';c.fillStyle='#436444';c.font='900 75px sans-serif';c.fillText(window.CLAW_MACHINE?CLAW_MACHINE.name:config.name,512,160);
     c.fillStyle='#494b55';c.font='bold 34px sans-serif';c.fillText(config.description.slice(0,19),512,270);c.fillText(config.description.slice(19),512,325);
-    c.font='28px sans-serif';c.fillText('投幣 10 元・夾出集券・機頂夾換',512,420);
+    c.font='28px sans-serif';c.fillText(window.CLAW_MACHINE?(CLAW_MACHINE.type==='free'?'每日免費挑戰':'試玩幣專屬機台'):'自由練習・享受小小的成就感',512,420);
     this.modeSign.material.map.dispose();this.modeSign.material.map=new THREE.CanvasTexture(canvas);this.modeSign.material.needsUpdate=true;
   }
   setView(view) {
@@ -95,12 +108,15 @@ window.Claw3D = class {
     this.roof.visible = view !== 'top';
     // A vertical camera needs an explicit up axis; rear stays at the top of the image.
     this.camera.up.set(0, view === 'top' ? 0 : 1, view === 'top' ? -1 : 0);
-    this.camera.position.set(...positions[view]);
+    this.currentView=view;
+    const distanceScale=Math.max(1,1/this.camera.aspect);
+    this.camera.position.set(...positions[view].map(v=>v*distanceScale));
     this.camera.lookAt(0,view === 'front' ? 200 : view === 'top' ? 0 : 175,0);
   }
   resize() {
     const rect=this.physics.canvas.parentElement.getBoundingClientRect();
     this.renderer.setSize(rect.width,rect.height,false); this.camera.aspect=rect.width/rect.height; this.camera.updateProjectionMatrix();
+    this.setView(this.currentView||'front');
   }
   createPrize(doll) {
     const T=THREE,g=new T.Group(),id=doll.type.id;
@@ -139,10 +155,13 @@ window.Claw3D = class {
     } else {
       const colors={bear:'#bd8055',bunny:'#ffdae9',capybara:'#b78c62',shiba:'#e5a24e',cat:'#fff1d0',penguin:'#6882ab',dino:'#80c99f',duck:'#ffda63'};
       const color=colors[id]||'#b7a0ed';
-      const fur=document.createElement('canvas');fur.width=128;fur.height=128;const fc=fur.getContext('2d');fc.fillStyle=color;fc.fillRect(0,0,128,128);
-      for(let i=0;i<2200;i++){fc.strokeStyle=i%2?'#ffffff30':'#32231520';const x=Math.random()*128,y=Math.random()*128;fc.beginPath();fc.moveTo(x,y);fc.lineTo(x+1,y+3);fc.stroke();}
-      const furTexture=new T.CanvasTexture(fur);furTexture.wrapS=furTexture.wrapT=T.RepeatWrapping;furTexture.repeat.set(3,3);
-      g.userData.furTexture=furTexture;
+      let furMaterial=this.furCache.get(color);
+      if(!furMaterial){
+        const fur=document.createElement('canvas');fur.width=128;fur.height=128;const fc=fur.getContext('2d');fc.fillStyle=color;fc.fillRect(0,0,128,128);
+        let seed=137;for(let i=0;i<2200;i++){seed=(seed*16807)%2147483647;const x=seed%128;seed=(seed*16807)%2147483647;const y=seed%128;fc.strokeStyle=i%2?'#ffffff30':'#32231520';fc.beginPath();fc.moveTo(x,y);fc.lineTo(x+1,y+3);fc.stroke();}
+        const furTexture=new T.CanvasTexture(fur);furTexture.colorSpace=T.SRGBColorSpace;furTexture.wrapS=furTexture.wrapT=T.RepeatWrapping;furTexture.repeat.set(3,3);
+        furMaterial=new T.MeshStandardMaterial({color:0xffffff,map:furTexture,roughness:1});this.furCache.set(color,furMaterial);this.sharedMaterials.add(furMaterial);
+      }
       this.ball(g,0,-9,0,23,color,1,1.1,.8);this.ball(g,0,15,0,25,color,1,1,.85);
       for(const sign of [-1,1]) {
         this.ball(g,sign*17,34,0,id==='bunny'?9:8,color,1,id==='bunny'?2.3:1,.65);
@@ -151,21 +170,33 @@ window.Claw3D = class {
       }
       this.ball(g,0,8,20,10,id==='duck'?'#ed9446':'#fff0df',1,.65,.4);
       this.ball(g,0,11,25,3,'#4e3643');
-      if(id==='capybara')this.ball(g,0,43,0,8,'#ffa52d');
+      if(id==='capybara'){
+        this.ball(g,0,43,0,8,'#ffa52d');this.ball(g,2,12,23,18,'#ad8057',1.05,.7,.8);this.ball(g,0,14,36,5,'#624331',1,.5,.6);
+      }
+      this.ball(g,0,-10,18,16,'#f3ddbb',.85,1.1,.2);
+      const bow=this.box(0,0,19,19,5,3,this.material('#698568'),g);bow.rotation.z=.08;
       if(id==='bear'){for(const side of [-1,1])this.ball(g,side*18,34,0,11,color,1.6,.8,.55);for(let i=0;i<12;i++){const t=i*Math.PI/6;this.ball(g,Math.cos(t)*24,-3,Math.sin(t)*17,7,'#f6efe4');}}
       if(id==='cat'){for(const side of [-1,1]){const ear=new T.Mesh(new T.ConeGeometry(11,22,3),this.material(color));ear.position.set(side*17,38,0);g.add(ear);this.ball(g,side*15,8,20,5,'#e9a6b0',1,.6,.3);}}
       if(id==='duck'){g.scale.y=.85;for(const side of [-1,1])this.ball(g,side*10,-27,10,10,'#f1a645',1.3,.45,1.2);}
       if(id==='penguin')this.ball(g,0,-8,17,18,'#f8f3e6',.85,1.15,.2);
       if(id==='bunny'){for(const side of [-1,1])this.ball(g,side*17,39,5,6,'#e9a0b8',1,2,.4);}
-      g.traverse(m=>{if(m.isMesh&&m.material.color?.getHexString()===new T.Color(color).getHexString()){m.material.map=furTexture;m.material.roughness=1;}});
+      g.traverse(m=>{if(m.isMesh&&m.material.color?.getHexString()===new T.Color(color).getHexString()){m.material=furMaterial;}});
       const tag=this.box(25,-13,-5,13,20,.5,this.material('#fff9e9'),g);tag.rotation.z=-.3;
 
+    }
+    if(doll.type.product){
+      const badge=document.createElement('canvas');badge.width=256;badge.height=64;const c=badge.getContext('2d');c.fillStyle='#f3d789';c.fillRect(0,0,256,64);c.fillStyle='#3b5a3c';c.font='bold 30px sans-serif';c.textAlign='center';c.fillText('本台商品',128,43);
+      const marker=new T.Mesh(new T.PlaneGeometry(49,12),new T.MeshBasicMaterial({map:new T.CanvasTexture(badge)}));marker.position.set(0,40,25);g.add(marker);
     }
     g.scale.multiplyScalar(doll.radius/30);this.scene.add(g);return g;
   }
   render() {
     const p=this.physics, live=new Set(p.dolls);
-    for(const [d,g] of this.models) if(!live.has(d)) {this.scene.remove(g);g.traverse(m=>{if(m.isMesh){m.geometry.dispose();const materials=Array.isArray(m.material)?m.material:[m.material];materials.forEach(mat=>{if(mat.map)mat.map.dispose();mat.dispose();});}});this.models.delete(d);}
+    for(const [d,g] of this.models) if(!live.has(d)) {
+      this.scene.remove(g);const geometries=new Set(),materials=new Set(),textures=new Set();
+      g.traverse(m=>{if(!m.isMesh)return;if(m.geometry!==this.sphereGeometry)geometries.add(m.geometry);for(const mat of (Array.isArray(m.material)?m.material:[m.material]))if(!this.sharedMaterials.has(mat)){materials.add(mat);if(mat.map)textures.add(mat.map);}});
+      geometries.forEach(x=>x.dispose());materials.forEach(x=>x.dispose());textures.forEach(x=>x.dispose());this.models.delete(d);
+    }
     for(const d of p.dolls) {
       if(!this.models.has(d))this.models.set(d,this.createPrize(d));
       const g=this.models.get(d);g.position.set(d.x-300,410-d.y,(d.depth-.65)*500);g.rotation.z=-d.rotation;g.rotation.y=Math.sin(d.x*.1)*.2;
