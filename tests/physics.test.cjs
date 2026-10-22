@@ -110,3 +110,102 @@ test("A small mall table always contains its corresponding product", () => {
     assert.ok(physics.dolls.some((d) => d.type === product));
   }
 });
+
+function retention({
+  swing = 0.35,
+  offset = 0,
+  weight = 1,
+  scale = 1,
+  secondStop = false,
+  guaranteed = false,
+} = {}) {
+  const { context, physics } = setup();
+  let seed = 20261022;
+  const math = Object.create(Math);
+  math.random = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+  context.Math = math;
+  physics.settings.isGuaranteed = guaranteed;
+  physics.claw.swing = swing;
+  physics.claw.secondStop = secondStop;
+  const type = { radius: 30, catchRadius: 36, catchDifficulty: 0.5, weight };
+  let kept = 0;
+  for (let i = 0; i < 5000; i++) {
+    physics.claw.holdingPrize = null;
+    physics.claw.dropAttemptDone = false;
+    physics.dolls = [physics.createDoll(type, 300 + offset, 260, 0.95, scale)];
+    if (physics.attemptGrab()) {
+      physics.checkReleaseOnLift();
+      physics.checkDropPowerRelease();
+      if (physics.claw.holdingPrize) kept++;
+    }
+  }
+  return kept / 5000;
+}
+
+test("Precise grip beats an edge grip; heavy prizes are harder to carry", () => {
+  const centered = retention(),
+    edge = retention({ offset: 31 }),
+    heavy = retention({ weight: 1.5, scale: 1.2 });
+  assert.ok(centered > edge + 0.05, { centered, edge });
+  assert.ok(centered > heavy + 0.05, { centered, heavy });
+  assert.ok(centered > 0.15 && centered < 0.45, centered);
+});
+
+test("Maximum swing is not a near-certain carry; well-timed second stop helps", () => {
+  const controlled = retention(),
+    excessive = retention({ swing: 1 }),
+    timed = retention({ secondStop: true });
+  assert.ok(excessive < controlled, { excessive, controlled });
+  assert.ok(excessive < 0.35, excessive);
+  assert.ok(timed > controlled, { timed, controlled });
+  assert.equal(retention({ guaranteed: true, weight: 1.5, scale: 1.2 }), 1);
+});
+
+test("Prizes must fully clear the chute, and idle settling cannot award a prize", () => {
+  const { physics } = setup();
+  physics.settleTimer = physics.graceTimer = 0;
+  const type = { radius: 20, catchRadius: 28, weight: 1 };
+  let wins = 0;
+  physics.triggerWin = (_, i) => {
+    wins++;
+    physics.dolls.splice(i, 1);
+  };
+  physics.rewardWindow = 8;
+  const doll = physics.createDoll(type, 115, 383, 0.95, 1);
+  doll.vx = doll.vy = 0;
+  physics.dolls = [doll];
+  physics.updateDolls(0);
+  assert.equal(wins, 0);
+  doll.y = 445;
+  physics.updateDolls(0);
+  assert.equal(wins, 1);
+  physics.rewardWindow = 0;
+  const idleDoll = physics.createDoll(type, 115, 445, 0.95, 1);
+  physics.dolls = [idleDoll];
+  physics.updateDolls(0);
+  assert.equal(wins, 1);
+  assert.ok(idleDoll.x > physics.chute.x + physics.chute.width);
+});
+
+test("A guaranteed large prize can pass the chute rods", () => {
+  const { context, physics } = setup();
+  physics.settleTimer = physics.graceTimer = 0;
+  physics.rewardWindow = 8;
+  const doll = physics.createDoll(
+    context.PRIZE_TYPES.find((t) => t.id === "fb_hero"),
+    115,
+    240,
+    0.95,
+    1.5,
+  );
+  doll.guaranteedCarry = true;
+  doll.vx = doll.vy = 0;
+  physics.dolls = [doll];
+  let won = false;
+  physics.triggerWin = (_, i) => {
+    won = true;
+    physics.dolls.splice(i, 1);
+  };
+  for (let i = 0; i < 600 && !won; i++) physics.updateDolls(1 / 60);
+  assert.ok(won);
+});

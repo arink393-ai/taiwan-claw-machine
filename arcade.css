@@ -1084,3 +1084,514 @@ body {
     font-size: 9px;
   }
 }
+/* Precision cabinet: illuminated glass, compact header and clearer operating stages. */
+.play-status-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 2px 17px;
+  border-bottom: 1px solid #dce2d4;
+  margin-bottom: 18px;
+}
+.play-status-bar > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.play-status-bar b {
+  font-size: 12px;
+  color: #405b44;
+}
+.play-status-bar span:not(.status-light) {
+  font-size: 10px;
+  color: #8b957e;
+}
+.status-light {
+  height: 7px;
+  width: 7px;
+  background: #d1b155;
+  box-shadow: 0 0 0 4px #e8dfbf;
+  border-radius: 50%;
+  margin: 0 5px;
+}
+.play-status-bar output {
+  font-size: 10px;
+  color: #6b815e;
+  background: #e7ecdd;
+  border: 1px solid #d4dec7;
+  border-radius: 6px;
+  padding: 5px 11px;
+  white-space: nowrap;
+}
+body[data-product-machine="true"] .mode-buttons button:not(.active) {
+  display: none;
+}
+body[data-product-machine="true"] .mode-buttons {
+  display: flex;
+}
+body[data-product-machine="true"] .mode-buttons button.active {
+  padding: 7px 18px;
+}
+body[data-product-machine="true"] .mode-selector {
+  grid-template-columns: 140px 1fr;
+  padding: 10px 15px;
+}
+.mode-selector {
+  margin-bottom: 8px;
+}
+.machine-banner {
+  margin-bottom: 10px;
+  padding: 10px 15px;
+}
+.top-bar {
+  padding: 16px 0;
+  margin-bottom: 15px;
+}
+.machine-topper {
+  min-height: 95px;
+}
+.shelf-items {
+  height: 85px;
+}
+.shelf-items .shelf-product img {
+  height: 61px;
+}
+.scratch-rack {
+  height: 90px;
+}
+.clipboard {
+  height: 82px;
+}
+.kraft-bag {
+  height: 78px;
+}
+.clip-title {
+  font-size: 8px;
+}
+.clip-beats {
+  font-size: 7px;
+}
+.feiluoli-cabinet {
+  background: linear-gradient(
+    90deg,
+    #b39b57 0,
+    #dfc887 2%,
+    #e9d69b 5%,
+    #e9d69b 95%,
+    #d6ba70 98%,
+    #b5994c 100%
+  );
+  border: 3px solid #ab924e;
+  border-radius: 18px;
+  box-shadow:
+    inset 0 3px #fff2c4,
+    inset 0 -5px #b29a53,
+    6px 8px #8d7e4f,
+    0 22px 40px #2b412a20;
+}
+.machine-marquee {
+  padding: 11px 12px;
+  margin: 12px 12px 0;
+  border-radius: 9px 9px 4px 4px;
+  background: linear-gradient(145deg, #375f4d, #203f34);
+  border: 1px solid #6e8156;
+  box-shadow:
+    inset 0 1px #749477,
+    inset 0 -3px #172f27;
+}
+.cabinet-model {
+  position: absolute;
+  left: 15px;
+  top: 17px;
+  font: 10px/1.7 monospace;
+  color: #b4c59b;
+  letter-spacing: 0.08em;
+}
+.cabinet-model small {
+  font: 5px/1.5 sans-serif;
+  display: block;
+  letter-spacing: 0.08em;
+}
+.brand-chinese {
+  font-size: 24px;
+}
+.marquee-sign {
+  padding-left: 65px;
+  padding-right: 5px;
+}
+.brand-english {
+  font-size: 7px;
+}
+.machine-showcase {
+  border: 9px solid #ad9d67;
+  border-radius: 7px;
+  outline: 1px solid #ebdca5;
+  box-shadow:
+    inset 0 0 0 2px #fff7d0,
+    0 1px #fff1c7;
+}
+.machine-showcase:after {
+  box-shadow:
+    inset 4px 0 8px #e8ecc965,
+    inset -4px 0 8px #e8ecc965,
+    inset 0 -10px 15px #233b2620;
+}
+.frame-bolt {
+  position: absolute;
+  z-index: 20;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: linear-gradient(125deg, #e4e7db, #929b8d);
+  box-shadow: 0 0 0 1px #687658;
+  pointer-events: none;
+}
+.frame-bolt:after {
+  content: "";
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  top: 2px;
+  height: 1px;
+  background: #687263;
+  transform: rotate(-30deg);
+}
+.bolt-tl {
+  top: 6px;
+  left: 5px;
+}
+.bolt-tr {
+  top: 6px;
+  right: 5px;
+}
+.bolt-bl {
+  bottom: 6px;
+  left: 5px;
+}
+.bolt-br {
+  bottom: 6px;
+  right: 5px;
+}
+.prize-ticker {
+  height: 50px;
+}
+.ticker-item img {
+  width: 34px;
+  height: 34px;
+}
+.machine-dashboard {
+  padding: 6px;
+}
+.meter-box {
+  padding: 5px 3px;
+}
+.machine-console {
+  width: 91%;
+}
+.console-plate {
+  min-height: 129px;
+  border: 3px solid #a4af95;
+  background: linear-gradient(145deg, #577652, #35583b);
+  box-shadow:
+    inset 0 1px #9db08b,
+    0 5px #69775b;
+}
+.arcade-big-button {
+  width: 79px;
+  height: 79px;
+}
+.btn-cap {
+  background: radial-gradient(
+    ellipse at 40% 20%,
+    #f9e7b2,
+    #e8ca74 65%,
+    #b99b45
+  );
+  box-shadow:
+    inset 0 3px #fff1c9,
+    inset 0 -4px #a68b3d,
+    0 5px #253e2b;
+}
+.arcade-big-button:disabled {
+  opacity: 0.65;
+}
+.control-label {
+  letter-spacing: 0.04em;
+}
+.action-status-text {
+  font-size: 10px;
+}
+.machine-lower {
+  min-height: 122px;
+  padding-top: 13px;
+}
+.coin-slot-housing {
+  border: 2px solid #a2ac9b;
+  box-shadow:
+    inset 0 1px #f4f7e7,
+    2px 3px #a09358;
+}
+.coin-slot-sign {
+  font-size: 9px;
+}
+.session-product {
+  padding-bottom: 16px;
+}
+.session-panel {
+  padding-top: 7px;
+}
+.back-to-mall {
+  margin-bottom: 20px;
+}
+#session-art {
+  height: 155px;
+  margin: 14px 0;
+}
+#session-art > img {
+  height: 148px;
+  width: 148px;
+}
+.session-product h2 {
+  font-size: 22px;
+}
+.challenge-card {
+  padding: 17px;
+  background: #e8eddf;
+  border: 1px solid #d2ddc6;
+  border-radius: 12px;
+  margin: 16px 0;
+}
+.challenge-card > .eyebrow {
+  font-size: 8px;
+  color: #8a956f;
+}
+.challenge-card h3 {
+  font-size: 16px;
+  color: #46623f;
+  margin: 5px 0 9px;
+}
+.challenge-card p {
+  font-size: 11px;
+  line-height: 1.9;
+  color: #75856a;
+  margin-bottom: 10px;
+}
+.challenge-card > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid #d5dfc8;
+  font-size: 10px;
+  color: #7e8d72;
+}
+.challenge-card > div b {
+  font-weight: 500;
+  color: #506e46;
+}
+.challenge-card > small {
+  display: block;
+  line-height: 1.8;
+  color: #8c947b;
+  font-size: 9px;
+  margin-top: 8px;
+}
+.session-enter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  border: 1px solid #254b3d;
+  border-radius: 8px;
+  background: #294e3d;
+  color: #f6efd5;
+  font-size: 12px;
+  padding: 13px 15px;
+  margin: 15px 0 20px;
+}
+.session-enter:hover {
+  background: #1c3c2d;
+}
+.play-focus .play-status-bar {
+  display: none;
+}
+.play-focus .feiluoli-cabinet {
+  border-radius: 12px;
+}
+.play-focus .console-plate {
+  min-height: 123px;
+}
+@media (max-width: 760px) {
+  .play-status-bar {
+    padding: 10px 0 12px;
+    margin-bottom: 12px;
+    gap: 8px;
+  }
+  .play-status-bar > div {
+    gap: 8px;
+  }
+  .play-status-bar b {
+    font-size: 10px;
+  }
+  .play-status-bar span:not(.status-light) {
+    display: none;
+  }
+  .play-status-bar output {
+    font-size: 9px;
+    padding: 5px 8px;
+  }
+  .status-light {
+    width: 5px;
+    height: 5px;
+    box-shadow: 0 0 0 3px #e8dfbf;
+  }
+  .top-bar {
+    padding: 12px 0;
+    gap: 8px;
+  }
+  .top-actions {
+    flex-wrap: nowrap;
+    overflow: auto;
+    scrollbar-width: none;
+  }
+  .tool-btn {
+    white-space: nowrap;
+    font-size: 8px;
+    padding: 6px 7px;
+    flex: none;
+  }
+  .machine-banner {
+    padding: 9px 11px;
+  }
+  .mb-main b {
+    font-size: 12px;
+  }
+  body[data-product-machine="true"] .mode-selector {
+    padding: 8px 11px;
+  }
+  body[data-product-machine="true"] .mode-buttons {
+    float: left;
+    margin: 0 10px 0 0;
+  }
+  body[data-product-machine="true"] #mode-description {
+    padding-top: 1px;
+    margin-top: 0;
+  }
+  body[data-product-machine="true"] #mode-hint {
+    font-size: 7px;
+    display: block;
+    margin-top: 4px;
+  }
+  .machine-topper {
+    min-height: 82px;
+  }
+  .shelf-items {
+    height: 74px;
+  }
+  .shelf-items .shelf-product img {
+    height: 50px;
+  }
+  .clipboard {
+    height: 72px;
+  }
+  .scratch-rack {
+    height: 76px;
+  }
+  .scratch-top-label {
+    font-size: 5px;
+  }
+  .rack-sign {
+    font-size: 7px;
+  }
+  .machine-marquee {
+    margin: 9px 8px 0;
+    padding: 10px 8px;
+  }
+  .cabinet-model {
+    left: 10px;
+    top: 16px;
+    font-size: 8px;
+  }
+  .cabinet-model small {
+    font-size: 4px;
+  }
+  .marquee-sign {
+    padding-left: 50px;
+  }
+  .brand-chinese {
+    font-size: 20px;
+  }
+  .pill-guarantee {
+    font-size: 7px;
+    padding: 3px 6px;
+  }
+  .machine-showcase {
+    border-width: 6px;
+  }
+  .prize-ticker {
+    height: 42px;
+  }
+  .ticker-item img {
+    width: 28px;
+    height: 28px;
+  }
+  .ticker-item span {
+    font-size: 6px;
+  }
+  .machine-dashboard {
+    padding: 5px;
+  }
+  .machine-console {
+    width: 94%;
+  }
+  .console-plate {
+    min-height: 130px;
+  }
+  .arcade-big-button {
+    height: 68px;
+    width: 68px;
+  }
+  .machine-lower {
+    min-height: 106px;
+  }
+  .challenge-card {
+    grid-column: 1/-1;
+    margin: 0;
+    padding: 14px;
+  }
+  .challenge-card h3 {
+    font-size: 14px;
+  }
+  .challenge-card p {
+    font-size: 10px;
+  }
+  .challenge-card > div {
+    font-size: 9px;
+    padding: 6px 0;
+  }
+  .session-enter {
+    grid-column: 1/-1;
+    margin: 0 0 8px;
+    font-size: 11px;
+  }
+  .session-product h2 {
+    font-size: 16px;
+  }
+  #session-art {
+    height: 100px;
+    margin: 0;
+  }
+  #session-art > img {
+    width: 95px;
+    height: 95px;
+  }
+  .play-focus .console-plate {
+    min-height: 126px;
+  }
+  .play-focus .arcade-big-button {
+    height: 65px;
+    width: 65px;
+  }
+}

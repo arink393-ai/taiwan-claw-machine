@@ -130,6 +130,7 @@ class ClawPhysics {
     this.settleTimer = 3;
     // 山堆剛鋪好、尚在垮落的幾秒內，掉進洞口的娃娃視為「滑出堆外」，放回山上而不算出貨
     this.graceTimer = 7;
+    this.rewardWindow = 0;
     const config=MACHINE_MODES[this.machineMode];
     const pool=PRIZE_TYPES.filter(config.filter);
     const baffleX = this.chute.x + this.chute.width;
@@ -226,6 +227,8 @@ class ClawPhysics {
   update(dt, input, state) {
     this.time += dt;
     this.lastDt = dt;
+    this.rewardWindow = Math.max(0, (this.rewardWindow || 0) - dt);
+    if (['DESCENDING','GRABBING','ASCENDING','RETURNING','RELEASING'].includes(state)) this.rewardWindow = 8;
     if (this.settleTimer > 0) this.settleTimer -= dt;
     if (this.graceTimer > 0) this.graceTimer -= dt;
 
@@ -370,7 +373,7 @@ class ClawPhysics {
       for (const rod of front ? this.rodPositions() : []) {
         const rx = doll.x - rod.x, ry = doll.y - rod.y;
         const rd = Math.hypot(rx, ry);
-        const minD = doll.radius * 0.78 + rod.r;
+        const minD = doll.radius * (doll.guaranteedCarry ? .55 : .78) + rod.r;
         if (rd < minD && rd > 0.001) {
           const nx = rx / rd, ny = ry / rd;
           doll.x = rod.x + nx * minD;
@@ -399,8 +402,8 @@ class ClawPhysics {
       }
 
       // 洞口判定
-      if (front && doll.x > this.chute.x && doll.x < baffleX && doll.y > baffleTopY + 10) {
-        if (this.graceTimer > 0) {
+      if (front && doll.x > this.chute.x && doll.x < baffleX && doll.y - doll.radius > floorY + 12) {
+        if (this.graceTimer > 0 || !(this.rewardWindow > 0)) {
           doll.x = baffleX + 80 + Math.random() * 60;
           doll.y = floorY - 160;
           doll.vx = 0;
@@ -515,6 +518,24 @@ class ClawPhysics {
     return Math.max(doll.type.catchRadius * doll.scale, doll.radius * .95 + 10);
   }
 
+  // These factors describe grip retention, not a promised per-play win rate.
+  gripFactors(doll) {
+    const gp = this.grabPoint();
+    const centered = Math.max(0, 1 - Math.abs(gp.x - doll.x) / (doll.radius + 8));
+    const depth = Math.max(0, 1 - Math.abs(doll.depth - this.gantry.depth) / this.depthTolerance);
+    const quality = centered * .65 + depth * .35;
+    const load = Math.max(0, doll.type.weight * Math.pow(doll.scale, 2) - 1);
+    const swing = Math.max(0, Math.min(1, this.claw.swing || 0));
+    const controlledSwing = Math.max(0, 1 - Math.abs(swing - .35) / .4);
+    return { quality, load, swing, controlledSwing };
+  }
+
+  grabChance(doll) {
+    const {quality,load,swing,controlledSwing}=this.gripFactors(doll);
+    const timing = this.claw.secondStop && quality > .55 ? .04 : 0;
+    return Math.max(.05, Math.min(.82, .08 + this.grabPower*.48 + quality*.30 - doll.type.catchDifficulty*.24 - load*.11 + controlledSwing*.04 + timing - Math.max(0,swing-.65)*.12));
+  }
+
   // 抓取檢測 (只能抓到景深範圍內的娃娃)
   attemptGrab() {
     const gp = this.grabPoint();
@@ -531,28 +552,26 @@ class ClawPhysics {
     }
 
     if (closestDoll) {
-      // 甩爪帶著動能，爪尖更容易卡進娃娃：甩得越大越好夾
-      const swingBonus = this.claw.swing * 0.2;
-      // 越大隻越難夾牢
-      const sizePenalty = (closestDoll.scale - 1) * 0.25;
-      const successChance = Math.max(0.2, (this.grabPower * 1.2) - (closestDoll.type.catchDifficulty * 0.35) + swingBonus - sizePenalty);
-
+      const successChance = this.grabChance(closestDoll);
       if (Math.random() <= successChance || this.settings.isGuaranteed) {
+        const factors=this.gripFactors(closestDoll);
+        this.claw.gripQuality=factors.quality;
+        this.claw.gripLoad=factors.load;
         this.claw.holdingPrize = closestDoll;
         closestDoll.isGrasped = true;
+        closestDoll.guaranteedCarry=this.settings.isGuaranteed;
         // Removing a support disturbs nearby packages; normal collisions carry the collapse.
         for (const neighbor of this.dolls) {
           if (neighbor === closestDoll || neighbor.isGrasped || neighbor.jam) continue;
           const distance = Math.hypot(neighbor.x-closestDoll.x, neighbor.y-closestDoll.y);
           if (Math.abs(neighbor.depth-closestDoll.depth)<.14 && distance<105) {
-            neighbor.vx += (neighbor.x < closestDoll.x ? -1 : 1) * (105-distance)*.8;
+            neighbor.vx += (neighbor.x < closestDoll.x ? -1 : 1) * (105-distance)*.45;
             neighbor.vy += 25;
             neighbor.rotVel += (neighbor.x < closestDoll.x ? -1 : 1)*.65;
           }
         }
-        // 直上直下夾住，爪子沒有咬進去，一提起來就容易放開，娃娃留在原地
-        const straight = 1 - this.claw.swing;
-        this.claw.releaseOnLift = !this.settings.isGuaranteed && Math.random() < 0.75 * straight * straight;
+        const liftRisk = Math.max(.05,Math.min(.75,.12+(1-factors.quality)*.5+factors.load*.12+Math.max(0,factors.swing-.6)*.15-(this.claw.secondStop ? .05 : 0)));
+        this.claw.releaseOnLift = !this.settings.isGuaranteed && Math.random() < liftRisk;
         return true;
       }
     }
@@ -580,12 +599,10 @@ class ClawPhysics {
     if (this.claw.dropAttemptDone) return false;
     this.claw.dropAttemptDone = true;
 
-    // 搬運電壓不夠，越重的獎品越容易中途鬆脫
     const held = this.claw.holdingPrize;
-    const heavy = (held.type.weight * Math.pow(held.scale, 1.5) - 1) * 0.3;
-    // 甩爪夾得比較牢，直上直下則比較容易掉
-    const grip = 1 - this.claw.swing * 0.5;
-    const dropChance = Math.max(0, Math.min(0.98, (1.0 - (this.carryPower * 1.1) + heavy) * grip));
+    const quality=this.claw.gripQuality ?? this.gripFactors(held).quality;
+    const load=this.claw.gripLoad ?? this.gripFactors(held).load;
+    const dropChance=Math.max(.08,Math.min(.92,.18+(1-this.carryPower)*.45+(1-quality)*.28+load*.18+Math.max(0,(this.claw.swing||0)-.6)*.16-(this.claw.secondStop ? .05 : 0)));
     if (Math.random() < dropChance) {
       const dropped = this.claw.holdingPrize;
       dropped.isGrasped = false;

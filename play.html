@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>飛絡力 夾娃娃機 (Fei Lou Li Claw Machine)</title>
-    <link rel="stylesheet" href="design.css?v=20261022-1" />
-    <link rel="stylesheet" href="style.css?v=20261022-1" />
-    <link rel="stylesheet" href="arcade.css?v=20261022-1" />
+    <link rel="stylesheet" href="design.css?v=20261022-2" />
+    <link rel="stylesheet" href="style.css?v=20261022-2" />
+    <link rel="stylesheet" href="arcade.css?v=20261022-2" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -83,6 +83,13 @@
       </nav>
 
       <!-- 夾娃娃機台本體 (經典飛絡力亮黃色機殼) -->
+      <section class="play-status-bar" aria-label="操作階段">
+        <div>
+          <span class="status-light" aria-hidden="true"></span><b>精準挑戰</b
+          ><span>對準重心・適度甩爪・完整落洞</span>
+        </div>
+        <output id="round-phase">準備開始</output>
+      </section>
       <div class="play-workspace">
         <main class="machine-wrapper">
           <!-- 機頂擺設：夾換品、刮刮樂、夾出登記板、牛皮紙袋 (實機常見) -->
@@ -120,6 +127,9 @@
           <div class="claw-machine feiluoli-cabinet">
             <!-- 頂部招牌燈箱 (Marquee) -->
             <div class="machine-marquee">
+              <span class="cabinet-model" aria-hidden="true"
+                >FL / 02<br /><small>PRECISION SERIES</small></span
+              >
               <div class="led-strip top">
                 <span class="led"></span><span class="led"></span
                 ><span class="led"></span> <span class="led"></span
@@ -156,6 +166,10 @@
 
             <!-- 機身中間：壓克力透明玻璃展示窗 (櫥窗區) -->
             <div class="machine-showcase">
+              <span class="frame-bolt bolt-tl" aria-hidden="true"></span
+              ><span class="frame-bolt bolt-tr" aria-hidden="true"></span
+              ><span class="frame-bolt bolt-bl" aria-hidden="true"></span
+              ><span class="frame-bolt bolt-br" aria-hidden="true"></span>
               <!-- 櫥窗邊框與反射層 -->
               <div class="glass-reflection-overlay"></div>
               <div class="cabinet-pillar left">
@@ -300,7 +314,9 @@
               <!-- 右側投幣機構 (Coin Mech) -->
               <div class="coin-mechanism">
                 <div class="coin-slot-housing">
-                  <div class="coin-slot-sign">投幣口 $10</div>
+                  <div class="coin-slot-sign" id="coin-slot-label">
+                    投幣口 $10
+                  </div>
                   <div
                     class="coin-slot-slit"
                     id="coin-slot-slit"
@@ -334,6 +350,19 @@
           <p class="reward-hint" id="reward-hint">
             夾中「本台商品」會記入我的獎品；其他獎品收進戰利品背包。
           </p>
+          <section class="challenge-card">
+            <span class="eyebrow">PRECISION CHALLENGE</span>
+            <h3>夾住，還要夾得穩。</h3>
+            <p>
+              對準商品中心和前後排，抓準二停時機。大幅甩爪會降低搬運穩定度，重盒更考驗咬合位置。
+            </p>
+            <div><span>位置與景深</span><b>影響咬合</b></div>
+            <div><span>重量與擺盪</span><b>影響搬運</b></div>
+            <small>商品完整落過洞口後才計入出貨；保夾仍保留強爪。</small>
+          </section>
+          <button class="session-enter" id="session-enter">
+            進入集中操作 <span>↗</span>
+          </button>
           <div class="session-rule">
             <div>
               <span id="session-price-label">每局試玩幣</span
@@ -355,7 +384,7 @@
           </div>
           <div class="session-how">
             <span class="eyebrow">A LITTLE GUIDE</span>
-            <h3>三步，開始你的挑戰。</h3>
+            <h3>掌握節奏，靠技巧出貨。</h3>
             <ol>
               <li>
                 <span>01</span>
@@ -366,7 +395,7 @@
               <li>
                 <span>02</span>
                 <p>
-                  <b>換個角度，慢慢對準</b
+                  <b>對準重心與前後排</b
                   ><small>搖桿移動，俯視看前後、側面看距離。</small>
                 </p>
               </li>
@@ -374,7 +403,7 @@
                 <span>03</span>
                 <p>
                   <b>下爪，再按一次二停</b
-                  ><small>把握收爪時機，夾到後記得領取。</small>
+                  ><small>適時二停收爪；重盒和過度擺盪更容易滑落。</small>
                 </p>
               </li>
             </ol>
@@ -670,134 +699,44 @@
         </div>
         <div class="modal-body">
           <div class="help-section">
-            <h4>🎯 核心四大神技</h4>
+            <h4>精準挑戰：三個關鍵</h4>
             <ul>
               <li>
-                <b>1. 甩爪 (Swinging Claw)</b
-                >：利用方向鍵或搖桿快速左右或前後搖晃，爪子會因慣性畫出拋物線擺盪，在爪子盪向洞口最高點時按下下爪——爪子會帶著當下的擺動速度，沿著甩動方向拋出一道弧線落下，把娃娃往洞口扯！
+                <b>對準中心與前後排</b
+                >：正面確認左右、俯視確認景深；只碰到邊角，起升後更容易滑落。
               </li>
               <li>
-                <b>2. 二停技巧 (Double Tap Stop)</b
-                >：按下下爪後，爪子向下墜落的過程中，<b>再次按下「下爪按鈕」</b>，爪子會立刻剎車停止下潛並提早閉合收爪！適合精準夾取娃娃的突起處（如耳朵、標籤、吸管），避免爪子戳到底翻倒娃娃。
+                <b>適度甩爪</b
+                >：控制擺盪可以調整落點，大幅甩動會降低咬合與搬運穩定度。
               </li>
               <li>
-                <b>3. 倒卡洞口 / 翻落法</b
-                >：如果娃娃已經被堆在洞口擋板邊緣，夾住娃娃外側，上升時娃娃被拉扯翻滾即有機率彈過擋板掉入洞口！
-              </li>
-              <li>
-                <b>4. 保夾保證取物</b
-                >：當投入金額達到保證取物金額時，綠色保夾指示燈會大亮，此時爪力鎖定為最強
-                100% 絕對不放爪，直到成功夾出獎品為止！
+                <b>適時二停</b
+                >：下爪後再次按下可提前收爪。對準的二停能增加抓穩機會，太早收爪仍可能夾空。
               </li>
             </ul>
           </div>
           <div class="help-section">
-            <h4>🧊 景深與前後移動</h4>
+            <h4>出貨與保夾</h4>
             <p>
-              機台有「前 / 後」兩個方向：用
-              <b>W / S</b
-              >（或搖桿上下）移動爪子的景深。離爪子太遠（較淡、較小）的獎品<b>夾不到</b>，右側的粉紅指示條會顯示目前可夾的範圍。
+              重量、大小與抓取位置會影響搬運。商品必須完整通過洞口才算出貨；補貨或待機時自行滑落不會計入獎品。
+            </p>
+            <p>
+              保夾保留強爪與搬運保護，仍須對準商品。標準挑戰預設不啟用拍數強爪或出貨後收水；自由練習的台主設定可自行試驗。
+            </p>
+            <p>
+              金色標記的「本台商品」會記入我的獎品；其他商品記入戰利品背包。
             </p>
           </div>
           <div class="help-section">
-            <h4>📏 大小不一與洞口鐵桿</h4>
+            <h4>操作方式</h4>
             <p>
-              同一種獎品有
-              <b>迷你 / 標準 / 大型 / 特大</b>
-              四種尺寸，越大隻越難夾牢。洞口有<b>兩支鐵桿</b>把出口縮小，太大隻的要擠過去，卡在桿子上時可以把它夾起來換個角度再放，或請台主把鐵桿間距調寬。
+              <b>WASD / 方向鍵</b>：移動；<b>Space / Enter</b
+              >：下爪與二停；<b>C</b>：依本台單價投入試玩幣或領取免費次數；<b>R</b>：自由練習待機時補貨。
             </p>
-          </div>
-          <div class="help-section">
-            <h4>🕵️ 台主常見手法</h4>
-            <ul>
-              <li>
-                <b>拍數強爪</b>：台主會設定「每 N
-                拍才有一拍強爪」，其他拍都在放水——電壓偏低，夾起來也容易中途鬆掉。
-              </li>
-              <li>
-                <b>出貨後收水</b>：剛出貨的下 3
-                拍爪力特別弱，這時連投多半是白花錢。
-              </li>
-              <li>
-                <b>卡洞預擺</b
-                >：特大獎品卡在洞口鐵桿上，看起來一碰就掉，其實擠不過去；要用「卡洞自取」付
-                2 局買走。
-              </li>
-              <li>
-                <b>縮口與擋板</b
-                >：鐵桿間距、擋板高度都能調，越大隻的獎品越難進洞。
-              </li>
-              <li>
-                <b>保夾不是白送</b
-                >：保夾金額一出貨就歸零；而且要累積到看板上的金額才啟動。
-              </li>
-            </ul>
-          </div>
-          <div class="help-section">
-            <h4>🔢 算拍數 &amp; 實戰技巧</h4>
-            <ul>
-              <li>
-                <b>算拍數</b
-                >：右下「拍數」是機台累計玩了幾拍，機頂登記板寫著最近出貨的拍數（例如
-                7·14·21）。看出貨間隔就知道台主設的週期，下一個強拍＝最近一次強拍＋週期。
-              </li>
-              <li>
-                <b>看爪定強弱</b
-                >：強拍時爪子閉合得特別緊（爪尖明顯收攏），弱拍時爪子鬆鬆的。先觀察別人這一拍的爪形，再決定要不要投。
-              </li>
-              <li>
-                <b>弱拍別硬夾</b
-                >：弱拍就拿來「推」——甩爪撥動獎品、把它推向洞口，留給強拍一次夾走。
-              </li>
-              <li>
-                <b>強拍重點</b
-                >：強拍才用二停夾高瘦盒的上緣、夾最重的獎品；強拍之後（剛出貨）不要連投。
-              </li>
-              <li>
-                <b>甩爪方向</b
-                >：爪子往哪邊盪，下爪就往哪邊飄；沒甩直上直下容易夾了就鬆。
-              </li>
-              <li>
-                <b>先挑小隻</b
-                >：迷你、標準尺寸好進洞；特大隻最好放著，先把它前面的東西清掉。
-              </li>
-              <li>
-                <b>預算</b>：算好保夾金額，快到保夾前別換機台，累積才不會白費。
-              </li>
-            </ul>
-          </div>
-          <div class="help-section">
-            <h4>🧹 清檯獎</h4>
             <p>
-              把檯面上的獎品<b>全部夾出洞口</b>就是清檯！可拿到<b
-                >黃金盲盒大獎、兌換券 +30、加送 5 局</b
-              >，機台會自動重新補貨。背牆的金色看板會顯示剩餘件數。
+              手機可拖曳搖桿；點「集中操作」將機台與操作鈕留在同一個畫面。按 Esc
+              可返回完整畫面。
             </p>
-          </div>
-          <div class="help-section">
-            <h4>🎁 獎品種類</h4>
-            <ul>
-              <li>
-                <b>🧸 療癒娃娃 / 🍉 食物抱枕</b
-                >：最常見，圓滾滾好夾；西瓜抱枕又大又滑。
-              </li>
-              <li>
-                <b>📦 公仔盒</b
-                >：高瘦盒、寬扁盒、方盒各種比例，有的包著收縮膜；盒子又重，要用二停夾邊角。
-              </li>
-              <li>
-                <b>🎁 盲盒</b
-                >：夾出後可「拆開盲盒」，抽中系列公仔，有機會開出<b>隱藏款</b>！金色盲盒必中稀有以上。
-              </li>
-              <li><b>🥚 扭蛋球</b>：體積小又圓，容易滑落。</li>
-            </ul>
-          </div>
-          <div class="help-section">
-            <h4>⌨️ 操作鍵位</h4>
-            <p>• <b>移動</b>：W / A / S / D 或 方向鍵 (支援多向靈活搖晃甩爪)</p>
-            <p>• <b>下爪 & 二停</b>：空白鍵 (Space) 或 Enter 鍵</p>
-            <p>• <b>投幣</b>：鍵盤 C 鍵 (投幣 10 元)</p>
-            <p>• <b>重新鋪貨</b>：鍵盤 R 鍵</p>
           </div>
         </div>
         <div class="modal-footer">
@@ -809,15 +748,15 @@
     </div>
 
     <!-- 遊戲腳本加載 -->
-    <script src="audio.js?v=20261022-1"></script>
-    <script src="catalog-art.js?v=20261022-1"></script>
-    <script src="prizes.js?v=20261022-1"></script>
-    <script src="machines.js?v=20261022-1"></script>
-    <script src="machine-boot.js?v=20261022-1"></script>
-    <script src="physics.js?v=20261022-1"></script>
+    <script src="audio.js?v=20261022-2"></script>
+    <script src="catalog-art.js?v=20261022-2"></script>
+    <script src="prizes.js?v=20261022-2"></script>
+    <script src="machines.js?v=20261022-2"></script>
+    <script src="machine-boot.js?v=20261022-2"></script>
+    <script src="physics.js?v=20261022-2"></script>
     <script src="vendor/three.min.js"></script>
-    <script src="scene3d.js?v=20261022-1"></script>
-    <script src="game.js?v=20261022-1"></script>
-    <script src="ui.js?v=20261022-1"></script>
+    <script src="scene3d.js?v=20261022-2"></script>
+    <script src="game.js?v=20261022-2"></script>
+    <script src="ui.js?v=20261022-2"></script>
   </body>
 </html>

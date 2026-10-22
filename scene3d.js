@@ -41,7 +41,7 @@ window.Claw3D = class {
     // Floor cells leave an actual open chute in the front left corner.
     for(let x=0;x<12;x++) for(let z=0;z<8;z++) {
       if(x>=1 && x<=2 && z>=6) continue;
-      this.box(-275+x*50,-5,-175+z*50,50,10,50,(x+z)%2 ? '#d8b78c':'#ddc39e');
+      this.box(-275+x*50,-5,-175+z*50,50,10,50,(x+z)%2 ? '#b6c19e':'#bbc6a4');
     }
     this.box(0,200,-205,600,400,10,'#dfe5d8');
     // Retail-style backboard, stainless rails and warm interior strip lighting.
@@ -60,9 +60,17 @@ window.Claw3D = class {
     this.box(300,200,0,10,400,410,'#e2e4d8');
     this.box(-185,-45,165,110,80,80,'#242337');
     this.box(-128,22,155,8,45,100,new T.MeshStandardMaterial({color:0x8bcfea,transparent:true,opacity:.35}));
-    this.box(0,370,-120,580,8,10,this.metal);
-    this.box(0,370,120,580,8,10,this.metal);
+    this.rearRail=this.box(0,370,-120,580,8,10,this.metal);
+    this.frontRail=this.box(0,370,120,580,8,10,this.metal);
+    for(const x of [-255,255])this.box(x,366,0,9,9,360,this.material('#5e6a60'));
+    this.bridge=this.box(0,357,0,540,12,22,this.material('#8f9b8e'));
+    for(const x of [-275,275]){const strip=this.box(x,206,-188,5,320,5,new T.MeshBasicMaterial({color:0xf6eac6}));strip.castShadow=false;}
+    this.box(0,5,-196,580,7,6,this.material('#d0bb7a'));
+    this.box(294,5,0,6,7,390,this.material('#d0bb7a'));
+    this.box(-294,5,0,6,7,390,this.material('#d0bb7a'));
     this.carriage = this.box(0,350,0,60,24,45,this.metal);
+    for(const x of [-23,23]){const wheel=new T.Mesh(new T.CylinderGeometry(7,7,9,16),this.material('#35483c'));wheel.rotation.z=Math.PI/2;wheel.position.set(x,9,0);this.carriage.add(wheel);}
+    this.box(0,2,24,23,8,4,this.material('#263e30'),this.carriage);
     this.cable = new T.Mesh(new T.CylinderGeometry(2,2,1,12),this.metal); this.scene.add(this.cable);
     this.claw = new T.Group(); this.claw.scale.setScalar(1.4); this.scene.add(this.claw);
     const red=new T.MeshStandardMaterial({color:0x881e37,metalness:.72,roughness:.3});
@@ -99,13 +107,14 @@ window.Claw3D = class {
     const c=canvas.getContext('2d');c.fillStyle='#f2efdd';c.fillRect(0,0,1024,512);
     c.strokeStyle='#b7bb94';c.lineWidth=14;c.strokeRect(12,12,1000,488);c.textAlign='center';c.fillStyle='#436444';c.font='900 75px sans-serif';c.fillText(window.CLAW_MACHINE?CLAW_MACHINE.name:config.name,512,160);
     c.fillStyle='#494b55';c.font='bold 34px sans-serif';c.fillText(config.description.slice(0,19),512,270);c.fillText(config.description.slice(19),512,325);
-    c.font='28px sans-serif';c.fillText(window.CLAW_MACHINE?(CLAW_MACHINE.type==='free'?'每日免費挑戰':'試玩幣專屬機台'):'自由練習・享受小小的成就感',512,420);
+    c.font='28px sans-serif';c.fillText('對準重心・控制擺盪・完整落洞才出貨',512,420);
     this.modeSign.material.map.dispose();this.modeSign.material.map=new THREE.CanvasTexture(canvas);this.modeSign.material.needsUpdate=true;
   }
   setView(view) {
     const positions={front:[0,200,940],side:[720,330,530],top:[0,950,0]};
     if (!positions[view]) return;
     this.roof.visible = view !== 'top';
+    this.bridge.visible=this.frontRail.visible=this.rearRail.visible=view!=='top';
     // A vertical camera needs an explicit up axis; rear stays at the top of the image.
     this.camera.up.set(0, view === 'top' ? 0 : 1, view === 'top' ? -1 : 0);
     this.currentView=view;
@@ -202,6 +211,7 @@ window.Claw3D = class {
       const g=this.models.get(d);g.position.set(d.x-300,410-d.y,(d.depth-.65)*500);g.rotation.z=-d.rotation;g.rotation.y=Math.sin(d.x*.1)*.2;
     }
     const z=(p.gantry.depth-.65)*500,cy=410-p.claw.y;
+    this.bridge.position.z=z;
     this.carriage.position.set(p.gantry.x-300,350,z);
     this.claw.position.set(p.claw.x-300,cy,z);this.claw.rotation.z=-p.claw.angle;
     const start=new THREE.Vector3(p.gantry.x-300,350,z),end=this.claw.position;

@@ -76,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // -------------------------------------------------------------
   const MACHINE = window.CLAW_MACHINE || null;
   const IS_FREE = !!(MACHINE && MACHINE.type === 'free');
+  document.body.dataset.productMachine=String(!!MACHINE);
   const PRICE_PER_PLAY = MACHINE ? MACHINE.pricePerPlay : 10;
   const SESSION_KEY='claw-session-v1-'+(MACHINE?.id||'practice');
   const openDialog=()=>!!document.querySelector('.modal-backdrop:not(.hidden)');
@@ -238,6 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (badge) badge.textContent = getMyPrizes().length;
     elBtnCoin.textContent=IS_FREE?`領取免費次數 · 剩 ${freeLeft()}`:`投入 ${PRICE_PER_PLAY} 試玩幣` ;
     elBtnCoin100.textContent=`儲值 ${PRICE_PER_PLAY*10} 試玩幣 · 10 局`;
+    document.getElementById('coin-slot-label').textContent=IS_FREE?'每日免費':`${PRICE_PER_PLAY} 試玩幣`;
     if (!MACHINE) return;
     const rule = IS_FREE
       ? `每日免費 ${MACHINE.freePlays} 次・今日剩 ${freeLeft()} 次`
@@ -294,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
   //   收水期：剛出貨後的 3 拍各 -8V
   //   (保夾時全部鎖最大電壓，不受影響)
   // -------------------------------------------------------------
-  const tricks = { beatOn: true, period: 7, coolDown: true };
+  const tricks = { beatOn: false, period: 7, coolDown: false };
 
   function computeBeatMod() {
     if (!tricks.beatOn) return { grab: 0, carry: 0 };
@@ -334,6 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
     physics.claw.openRatio = 0.85;
     physics.claw.holdingPrize = null;
     physics.claw.dropAttemptDone = false;
+    physics.claw.secondStop = false;
 
     elBtnDrop.disabled = false;
     const cap = elBtnDrop.querySelector('.btn-text');
@@ -363,6 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (state.mode === 'DESCENDING' && state.isSecondStopAvailable && !state.hasSecondStopped) {
       // 2. 第二次按下：經典二停！立即煞車收爪！
       state.hasSecondStopped = true;
+      physics.claw.secondStop = true;
       state.isSecondStopAvailable = false;
       window.clawAudio.playSecondStop();
 
@@ -378,9 +382,10 @@ document.addEventListener('DOMContentLoaded', () => {
     physics.claw.openRatio = physics.gripOpenRatio(); // 閉合：電壓越高閉得越緊
     window.clawAudio.playClawSnap();
 
+    physics.rewardWindow=8;
     // 進行抓取碰撞判定
     const caught = physics.attemptGrab();
-    elActionText.textContent = caught ? '🎯 抓到了！準備上升...' : '爪子閉合，未抓中！';
+    elActionText.textContent = caught ? '已咬住商品，起升測試中…' : '未夾牢，試著對準中心與前後位置。';
 
     // 爪子閉合後短暫停頓 0.35 秒開始上升
     setTimeout(() => {
@@ -389,7 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
       elBtnDrop.disabled = true;
       const cap = elBtnDrop.querySelector('.btn-text');
       if (cap) cap.textContent = '上升中';
-      elActionText.textContent = slipped ? '直上直下沒夾牢，一提就鬆開了！' : '爪子上升中...';
+      elActionText.textContent = slipped ? '沒有咬牢，起升時滑落了。試著對準中心。' : '爪子上升中...';
     }, 350);
   }
 
@@ -553,7 +558,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 主更新循環 (RequestAnimationFrame)
-  let lastTime = performance.now(),lastHudUpdate=0;
+  let lastTime = performance.now(),lastHudUpdate=0,lastPhase='';
+  const phaseLabels={IDLE:'準備開始',PLAYING:'01 / 瞄準',DESCENDING:'02 / 下爪・可二停',GRABBING:'03 / 咬合',ASCENDING:'04 / 起升',RETURNING:'05 / 搬運',RELEASING:'06 / 完整落洞'};
   const aimHud=document.createElement('div');aimHud.className='aim-hud';document.querySelector('.machine-showcase').append(aimHud);
 
   function gameLoop(now) {
@@ -644,7 +650,7 @@ document.addEventListener('DOMContentLoaded', () => {
       physics.gantry.depth += Math.sign(dDepth) * Math.min(Math.abs(dDepth), 0.5 * dt);
 
       // 到達洞口上方
-      if (Math.abs(physics.gantry.x - targetX) < 2) {
+      if (Math.abs(physics.gantry.x - targetX) < 2 && Math.abs(dDepth) < .015) {
         state.mode = 'RELEASING';
         elActionText.textContent = '開爪釋放！';
       }
@@ -689,7 +695,7 @@ document.addEventListener('DOMContentLoaded', () => {
       state.isMotorSoundPlaying = false;
     }
 
-    if(now-lastHudUpdate>150){lastHudUpdate=now;const depth=physics.gantry.depth;aimHud.textContent=(depth>.8?'前排':depth>.57?'中排':'後排')+' · '+physics.dolls.length+' 件獎品';}
+    if(now-lastHudUpdate>150){lastHudUpdate=now;const depth=physics.gantry.depth;aimHud.textContent=(depth>.8?'前排':depth>.57?'中排':'後排')+' · '+physics.dolls.length+' 件獎品';if(lastPhase!==state.mode){lastPhase=state.mode;document.getElementById('round-phase').textContent=phaseLabels[state.mode]||state.mode;}}
     // 4. 畫布繪製
     if (scene3d && !scene3d.renderer.getContext().isContextLost()) scene3d.render(); else physics.render();
 
@@ -1378,7 +1384,7 @@ document.addEventListener('DOMContentLoaded', () => {
     banner.classList.remove('hidden');
     document.getElementById('btn-owner-mode').classList.add('hidden');
     document.getElementById('mb-tag').textContent = IS_FREE ? '每日免費' : '試玩幣機台';
-    document.getElementById('mb-name').textContent = `${MACHINE.name}　獎品：${MACHINE.product.name}`;
+    document.getElementById('mb-name').textContent = MACHINE.name;
     document.querySelector('.arcade-title h1').textContent = `🏬 ${MACHINE.name}`;
   }
 
@@ -1425,6 +1431,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('focus-start').addEventListener('click',()=>insertCoin(PRICE_PER_PLAY));
   const focusButton=document.getElementById('btn-focus');
+  document.getElementById('session-enter').addEventListener('click',()=>{if(!document.body.classList.contains('play-focus'))focusButton.click();});
   focusButton.addEventListener('click',()=>{const on=document.body.classList.toggle('play-focus');focusButton.setAttribute('aria-pressed',String(on));focusButton.textContent=on?'⛶ 返回完整畫面':'⛶ 集中操作';window.scrollTo(0,0);});
   window.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('play-focus'))focusButton.click();});
   function clearInput(){input.left=input.right=input.up=input.down=false;input.joyX=input.joyY=0;handleJoyEnd();window.clawAudio.stopMotor();state.isMotorSoundPlaying=false;}
@@ -1436,5 +1443,5 @@ document.addEventListener('DOMContentLoaded', () => {
   if(IS_FREE){document.getElementById('session-progress').setAttribute('aria-label','今日免費次數使用進度');document.getElementById('session-progress-label').textContent='今日剩餘次數';document.getElementById('session-progress-note').textContent='每日台北時間 00:00 重新補充免費次數。';}
   // 初始化首次顯示
   updateDisplays();
-  if(state.credits>0)startNextRound();
+  startNextRound();
 });

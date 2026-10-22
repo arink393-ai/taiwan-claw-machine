@@ -336,7 +336,7 @@
       "btn-primary wide",
       canPlay(m) ? "開始遊玩 →" : "今日免費次數已用完",
     );
-    go.href = `play.html?m=${encodeURIComponent(m.id)}`;
+    go.href = `play.html?m=${encodeURIComponent(m.id)}&v=20261022-2`;
     if (!canPlay(m)) {
       go.removeAttribute("href");
       go.style.opacity = 0.5;
@@ -468,7 +468,7 @@
       el("b", "", "繼續挑戰 · " + machine.name),
     );
     const link = el("a", "", "返回機台 ↗");
-    link.href = "play.html?m=" + encodeURIComponent(machine.id);
+    link.href = "play.html?m=" + encodeURIComponent(machine.id) + "&v=20261022-2";
     section.append(text, link);
     section.classList.remove("hidden");
   }
